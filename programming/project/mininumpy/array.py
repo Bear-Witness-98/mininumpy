@@ -7,12 +7,56 @@ class Array:
     ndim: int
     size: int
 
-    def __init__(self, sanitized_list:list[str | int | float]):
-        self.stored_data = sanitized_list
-        # fix other stuff
+    def __init__(self, input_list:list[str | int | float]):
+       
+        # get data dimension
+        self.shape = self._get_list_shape(input_list)[0]
+        self.ndim = len(self.shape)
+        self.size = self._multiply_int_list(self.shape)
 
-    # Here the output should be an instance of this same class.
-    # But in the typehints you just put the class, not the instance
+        # actually store data
+        self.stored_data = input_list
+        # TODO: data in memoryview still missing
+
+    @staticmethod
+    def _multiply_int_list(lst: int) -> int:
+        accum = 1
+        for elem in lst:
+            accum *= elem
+        return accum
+
+    @staticmethod
+    def _is_same_or_castable(type_1: int | float | list | None, type_2: int | float | list | None) -> bool:
+        
+        if type_1 == type_2:
+            return True
+        if {type_1, type_2} == {int, float}: 
+            return True
+        return False
+
+    @classmethod
+    def _get_list_shape(cls, test_list: list | int | float) -> tuple[tuple[int], int | float | None]:
+        # check if the list has consistent dimensions (no sublists of different)
+        # length
+        if isinstance(test_list, list):
+            length = len(test_list)
+            if length == 0:
+                return (0, None)
+            
+            shapes = [cls._get_list_shape(elem) for elem in test_list]
+            shape_1 = shapes[0][0]
+            type_1 = shapes[0][1]
+            for shape in shapes[1:]:
+                if (shape[0] != shape_1):
+                    raise ValueError("Inconsistent shape between sublists")
+                if not cls._is_same_or_castable(type_1, shape[1]):
+                    raise ValueError("Inconsistent typing between sublists' elements")
+            return (length, *shape_1), type_1
+
+        if isinstance(test_list, int) or isinstance(test_list, float):
+            return (), type(test_list)
+
+
     def reshape(self, new_shape:tuple[int]):
         pass
 
@@ -68,22 +112,43 @@ class MiniNumPy:
 
         return array
 
+    @staticmethod
+    def _check_range(start: float, stop: float) -> None:
+        if start > stop:
+            raise RuntimeError("Invalid range, start > stop")
+
+    @staticmethod
+    def _check_postive(number: float, name: str) -> None:
+        if number <= 0:
+            raise RuntimeError(f"Invalid value ( <=0 ) for {name}")
+
     @classmethod
     def arange(cls, start:float, stop:float, step:float) -> Array:
-        # evenly spaced values in the interval [start,stop)
-        # sanitize input (zero step, stop > start, etc).
-        # this has some issues, fix
-        n_values = int((stop - start) / step)
+        # Array of values from [start,stop), with difference of
+        # step in between each pair
+    
+        # sanitize input
+        cls._check_range(start, stop)
+        cls._check_positive(step, "step")
+        
+
         base_list = []
-        for idx in range(n_values):
+        idx = 0
+        while start + idx*step < stop:
             base_list.append(start + step*idx)
+            idx += 1
 
         return cls.array(base_list)
 
     @classmethod
     def linspace(cls, start:float, stop:float, num:int) -> Array:
+        # evenly num-spaced values in the interval [start,stop)
         
-        diff = int((stop - start) / num)
+        # sanitize input
+        cls._check_range(start, stop)
+        cls._check_positive(num, "num")
+
+        diff = (stop - start) / num
         base_list = []
         for idx in range(num):
             base_list.append(start + diff*idx)
