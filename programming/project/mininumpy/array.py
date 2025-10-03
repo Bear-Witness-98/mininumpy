@@ -8,7 +8,7 @@ class Array:
     size: int
 
     def __init__(self, input_list:list[str | int | float]):
-       
+
         # get data dimension
         self.shape = self._get_list_shape(input_list)[0]
         self.ndim = len(self.shape)
@@ -27,10 +27,10 @@ class Array:
 
     @staticmethod
     def _is_same_or_castable(type_1: int | float | list | None, type_2: int | float | list | None) -> bool:
-        
+
         if type_1 == type_2:
             return True
-        if {type_1, type_2} == {int, float}: 
+        if {type_1, type_2} == {int, float}:
             return True
         return False
 
@@ -42,7 +42,7 @@ class Array:
             length = len(test_list)
             if length == 0:
                 return (0, None)
-            
+
             shapes = [cls._get_list_shape(elem) for elem in test_list]
             shape_1 = shapes[0][0]
             type_1 = shapes[0][1]
@@ -67,25 +67,25 @@ class Array:
         pass
 
 
-    
+
 class MiniNumPy:
 
     @staticmethod
     def array(list_or_nested_list: list) -> Array:
         # Sanitize array
         return Array(list_or_nested_list)
-    
+
 
     @classmethod
     def _singular_value_array(cls, shape: tuple[int], value: int | float) -> Array:
-        
+
         # construct a mega list with zeros
         # sanitize input
         ndim = len(shape)
         size = 1
         for dim_length in shape:
             size *= dim_length
-        
+
         current_value = value
         for dim in shape[::-1]:
             if isinstance(current_value, int) or isinstance(current_value, float):
@@ -95,7 +95,7 @@ class MiniNumPy:
             current_value = current_list_level
 
         return cls.array(current_list_level)
-    
+
     @classmethod
     def zeros(cls, shape: tuple[int]) -> Array:
         return cls._singular_value_array(shape, 0)
@@ -126,11 +126,11 @@ class MiniNumPy:
     def arange(cls, start:float, stop:float, step:float) -> Array:
         # Array of values from [start,stop), with difference of
         # step in between each pair
-    
+
         # sanitize input
         cls._check_range(start, stop)
         cls._check_positive(step, "step")
-        
+
 
         base_list = []
         idx = 0
@@ -143,7 +143,7 @@ class MiniNumPy:
     @classmethod
     def linspace(cls, start:float, stop:float, num:int) -> Array:
         # evenly num-spaced values in the interval [start,stop)
-        
+
         # sanitize input
         cls._check_range(start, stop)
         cls._check_positive(num, "num")
@@ -154,8 +154,3 @@ class MiniNumPy:
             base_list.append(start + diff*idx)
 
         return cls.array(base_list)
-
-
-
-
-

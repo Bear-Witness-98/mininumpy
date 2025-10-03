@@ -1,0 +1,38 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "files.watcherExclude": {
+    "**/.venv/**": true,
+    "**/.ruff_cache/**": true
+  },
+  "files.exclude": {
+    "**/.ruff_cache/": true
+  },
+  "search.exclude": {
+    "**/.venv/": true,
+    "**/.ruff_cache/": true
+  },
+
+
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.ruff": "explicit"
+    },
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "editor.rulers": [
+    100
+  ],
+  "editor.wordWrapColumn": 100,
+  "files.trimFinalNewlines": true,
+  "files.trimTrailingWhitespace": true,
+  "jupyter.notebookFileRoot": "${workspaceFolder}",
+  "jupyter.interactiveWindow.textEditor.executeSelection": true,
+  "notebook.formatOnSave.enabled": true,
+  "python.testing.pytestArgs": [
+    "tests",
+    "--cov=project_base"
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+}
