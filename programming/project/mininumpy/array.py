@@ -7,8 +7,7 @@ class Array:
     ndim: int
     size: int
 
-    def __init__(self, input_list:list[str | int | float]):
-
+    def __init__(self, input_list: list[int | float]):
         # get data dimension
         self.shape = self._get_list_shape(input_list)[0]
         self.ndim = len(self.shape)
@@ -26,8 +25,10 @@ class Array:
         return accum
 
     @staticmethod
-    def _is_same_or_castable(type_1: int | float | list | None, type_2: int | float | list | None) -> bool:
-
+    def _is_same_or_castable(
+        type_1: int | float | list | None,
+        type_2: int | float | list | None,
+    ) -> bool:
         if type_1 == type_2:
             return True
         if {type_1, type_2} == {int, float}:
@@ -35,7 +36,9 @@ class Array:
         return False
 
     @classmethod
-    def _get_list_shape(cls, test_list: list | int | float) -> tuple[tuple[int], int | float | None]:
+    def _get_list_shape(
+        cls, test_list: int | float | list,
+    ) -> tuple[tuple[int], int | float | None]:
         # check if the list has consistent dimensions (no sublists of different)
         # length
         if isinstance(test_list, list):
@@ -47,7 +50,7 @@ class Array:
             shape_1 = shapes[0][0]
             type_1 = shapes[0][1]
             for shape in shapes[1:]:
-                if (shape[0] != shape_1):
+                if shape[0] != shape_1:
                     raise ValueError("Inconsistent shape between sublists")
                 if not cls._is_same_or_castable(type_1, shape[1]):
                     raise ValueError("Inconsistent typing between sublists' elements")
@@ -56,8 +59,10 @@ class Array:
         if isinstance(test_list, int) or isinstance(test_list, float):
             return (), type(test_list)
 
+        else:
+            return ValueError("Cannot get the shape of non-list, non-nummber type")
 
-    def reshape(self, new_shape:tuple[int]):
+    def reshape(self, new_shape: tuple[int]):
         pass
 
     def transpose(self):
@@ -67,18 +72,14 @@ class Array:
         pass
 
 
-
 class MiniNumPy:
-
     @staticmethod
     def array(list_or_nested_list: list) -> Array:
         # Sanitize array
         return Array(list_or_nested_list)
 
-
     @classmethod
     def _singular_value_array(cls, shape: tuple[int], value: int | float) -> Array:
-
         # construct a mega list with zeros
         # sanitize input
         ndim = len(shape)
@@ -90,7 +91,7 @@ class MiniNumPy:
         for dim in shape[::-1]:
             if isinstance(current_value, int) or isinstance(current_value, float):
                 current_list_level = [current_value for _ in range(dim)]
-            else: # should be a list instace
+            else:  # should be a list instace
                 current_list_level = [current_value.copy() for _ in range(dim)]
             current_value = current_list_level
 
@@ -105,8 +106,8 @@ class MiniNumPy:
         return cls._singular_value_array(shape, 1)
 
     @classmethod
-    def eye(cls, n:int) -> Array:
-        array = cls.zeros((n,n))
+    def eye(cls, n: int) -> Array:
+        array = cls.zeros((n, n))
         for i in range(n):
             array.stored_data[i][i] = 1
 
@@ -123,7 +124,7 @@ class MiniNumPy:
             raise RuntimeError(f"Invalid value ( <=0 ) for {name}")
 
     @classmethod
-    def arange(cls, start:float, stop:float, step:float) -> Array:
+    def arange(cls, start: float, stop: float, step: float) -> Array:
         # Array of values from [start,stop), with difference of
         # step in between each pair
 
@@ -131,17 +132,16 @@ class MiniNumPy:
         cls._check_range(start, stop)
         cls._check_positive(step, "step")
 
-
         base_list = []
         idx = 0
-        while start + idx*step < stop:
-            base_list.append(start + step*idx)
+        while start + idx * step < stop:
+            base_list.append(start + step * idx)
             idx += 1
 
         return cls.array(base_list)
 
     @classmethod
-    def linspace(cls, start:float, stop:float, num:int) -> Array:
+    def linspace(cls, start: float, stop: float, num: int) -> Array:
         # evenly num-spaced values in the interval [start,stop)
 
         # sanitize input
@@ -151,6 +151,6 @@ class MiniNumPy:
         diff = (stop - start) / num
         base_list = []
         for idx in range(num):
-            base_list.append(start + diff*idx)
+            base_list.append(start + diff * idx)
 
         return cls.array(base_list)
