@@ -102,10 +102,11 @@ class Array:
 	# should be easy.
 	def transpose(self, permutation: tuple[int] | None = None):
 		if permutation is None:
-			# turn the indices around
-			pass
+			permutation = tuple(reversed(range(self.ndim)))
 		if set(permutation) != set(range(len(permutation))):
 			raise RuntimeError("Invalid permutation for transposition.")
+
+		new_shape = (self.shape[p] for p in permutation)
 
 	@classmethod
 	def _unflatten_list(
