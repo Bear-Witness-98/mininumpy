@@ -1,4 +1,4 @@
-# File with
+# File with the implementation of the array type.
 
 
 class Array:
