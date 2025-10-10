@@ -47,17 +47,6 @@ class Array:
 			accum *= elem
 		return accum
 
-	@staticmethod
-	def _is_same_or_castable(
-		type_1: int | float | list | None,
-		type_2: int | float | list | None,
-	) -> bool:
-		if type_1 == type_2:
-			return True
-		if {type_1, type_2} == {int, float}:
-			return True
-		return False
-
 	# TODO: evaluate empty list edge case
 	@classmethod
 	def _get_list_shape(
@@ -83,7 +72,7 @@ class Array:
 			for shape, dtype in shape_dtype_list[1:]:
 				if shape != first_shape:
 					raise ValueError("Inconsistent shape between sublists")
-				if not cls._is_same_or_castable(first_dtype, dtype):
+				if not (first_dtype == dtype):
 					raise ValueError("Inconsistent typing between sublists' elements")
 			return (length, *first_shape), first_dtype
 
