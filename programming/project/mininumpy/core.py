@@ -82,7 +82,7 @@ def arange(start: float, stop: float, step: float) -> Array:
 	return array(base_list)
 
 
-def linspace(cls, start: float, stop: float, num: int) -> Array:
+def linspace(start: float, stop: float, num: int) -> Array:
 	# evenly num-spaced values in the interval [start,stop)
 
 	# sanitize input
