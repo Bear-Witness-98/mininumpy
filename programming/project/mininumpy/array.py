@@ -98,11 +98,41 @@ class Array:
 	# dimensions is correct, again, checking numpy's behaviour, it
 	# should be easy
 	def transpose(self, permutation: tuple[int] | None = None):
-		pass
+		if permutation is None:
+			pass
+		if set(permutation) is not set(range(len(permutation))):
+			raise RuntimeError("Permutation invalid.")
+
+	@classmethod
+	def _unflatten_list(
+		cls,
+		flattened_list: list[int | float | None],
+		shape: tuple[int],
+	) -> list:
+		# shape must be valid, otherwise unexpected results will be obtained.
+
+		if flattened_list == []:
+			return flattened_list
+		if (len(shape) == 0) or (len(shape) == 1):
+			return flattened_list
+
+		print("Recursive call")
+		unflattend_list = []
+		sublength = cls._multiply_int_list(shape[1:])
+		for idx in range(shape[0]):
+			unflattend_list.append(
+				cls._unflatten_list(
+					flattened_list[idx * sublength : (idx + 1) * sublength], shape[1:]
+				)
+			)
+
+		return unflattend_list
 
 	# check exactly how the pretty printing works here.
 	def __str__(self):
-		pass
+		return self._unflatten_list(self.data_list, self.shape).__str__()
+
+	__repr__ = __str__
 
 
 class MiniNumPy:
