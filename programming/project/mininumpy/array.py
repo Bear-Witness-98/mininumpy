@@ -3,7 +3,6 @@ class Array:
 
 	data: memoryview
 	data_list = list
-	data_array: list[int | float | list]
 	shape: tuple[int]
 	dtype: type[int] | type[float] | type[None]
 	ndim: int
@@ -12,33 +11,21 @@ class Array:
 	# TODO: get the memoryview thing correctly
 	# TODO: check the type consitency, if casting is necessary
 	def __init__(self, input_list: list[int | float]):
-		# converts list into Array type
+		"""
+		Creates Array object from given list,
+
+		This class only accepts same type (int or float) multi-nested arrays of homegenous
+		dimension. If the input list does not match these conditions, and exception will be raised
+		at runtime.
+		"""
+
 		self.shape, self.dtype = self._get_list_shape(input_list)
 		self.ndim = len(self.shape)
 		self.size = self._multiply_int_list(self.shape)
 
 		# actually store data
-		self.data_array = input_list
-		self.data_list = self._flatten_list(self.data_array)
+		self.data_list = self._flatten_list(input_list)
 		# TODO: data in memoryview still missing
-
-	@staticmethod
-	def _is_base_dtype(elem: any) -> bool:
-		return isinstance(elem, int) or isinstance(elem, float)
-
-	@classmethod
-	def _flatten_list(cls, lst: list | int | float) -> list:
-		"""
-		Flatten list (C or Fortran style not yet registered)
-		"""
-		if cls._is_base_dtype(lst):
-			return [lst]
-
-		flattened_list = []
-		for elem in lst:
-			flattened_list += cls._flatten_list(elem)
-
-		return flattened_list
 
 	@staticmethod
 	def _multiply_int_list(lst: list[int]) -> int:
@@ -46,6 +33,10 @@ class Array:
 		for elem in lst:
 			accum *= elem
 		return accum
+
+	@staticmethod
+	def _is_int_or_float(elem: any) -> bool:
+		return isinstance(elem, int) or isinstance(elem, float)
 
 	# TODO: evaluate empty list edge case
 	@classmethod
@@ -76,21 +67,37 @@ class Array:
 					raise ValueError("Inconsistent typing between sublists' elements")
 			return (length, *first_shape), first_dtype
 
-		if isinstance(test_list, int) or isinstance(test_list, float):
+		if cls._is_int_or_float(test_list):
 			return (), type(test_list)
 
 		else:
 			return ValueError("Cannot get the shape of non-list, non-nummber type")
 
+	@classmethod
+	def _flatten_list(cls, lst: list | int | float) -> list:
+		"""
+		Flatten list (check if this may correspond with C or Fortran style memory storing.)
+		"""
+		if cls._is_int_or_float(lst):
+			return [lst]
+
+		flattened_list = []
+		for elem in lst:
+			flattened_list += cls._flatten_list(elem)
+
+		return flattened_list
+
 	# From the memoryview, with a sanity check on the current shape
 	# and checking numpy's behaviour, it should be easy
 	def reshape(self, new_shape: tuple[int]):
-		pass
+		if self._multiply_int_list(new_shape) != self.size:
+			raise RuntimeError("size of input shape does not correspond to size of current array")
+		self.shape = new_shape
 
 	# From its current shape, and checking that the permutation of
 	# dimensions is correct, again, checking numpy's behaviour, it
 	# should be easy
-	def transpose(self):
+	def transpose(self, permutation: tuple[int] | None = None):
 		pass
 
 	# check exactly how the pretty printing works here.
@@ -139,11 +146,13 @@ class MiniNumPy:
 	@classmethod
 	def eye(cls, n: int) -> Array:
 		"""Returns a square array of shape (n,n) with ones in its diagonal."""
-		array = cls.zeros((n, n))
-		for i in range(n):
-			array.data_array[i][i] = 1
-
-		return array
+		# creates 2-dimensional list with proper shape and values
+		lst = [
+			[1 if idx_2 == idx else 0 for idx_2, __ in enumerate(range(n))]
+			for idx, _ in enumerate(range(n))
+		]
+		# converts to array and returns
+		return cls.array(lst)
 
 	@staticmethod
 	def _check_range(start: float, stop: float) -> None:
