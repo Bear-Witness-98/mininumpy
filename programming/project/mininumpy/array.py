@@ -1,13 +1,16 @@
 class Array:
 	"""Array data to emulate numpy class"""
 
-	stored_data: list[int | float]
 	data: memoryview
+	data_list = list
+	data_array: list[int | float | list]
 	shape: tuple[int]
 	dtype: type[int] | type[float] | type[None]
 	ndim: int
 	size: int
 
+	# TODO: get the memoryview thing correctly
+	# TODO: check the type consitency, if casting is necessary
 	def __init__(self, input_list: list[int | float]):
 		# converts list into Array type
 		self.shape, self.dtype = self._get_list_shape(input_list)
@@ -15,11 +18,30 @@ class Array:
 		self.size = self._multiply_int_list(self.shape)
 
 		# actually store data
-		self.stored_data = input_list
+		self.data_array = input_list
+		self.data_list = self._flatten_list(self.data_array)
 		# TODO: data in memoryview still missing
 
 	@staticmethod
-	def _multiply_int_list(lst: int) -> int:
+	def _is_base_dtype(elem: any) -> bool:
+		return isinstance(elem, int) or isinstance(elem, float)
+
+	@classmethod
+	def _flatten_list(cls, lst: list | int | float) -> list:
+		"""
+		Flatten list (C or Fortran style not yet registered)
+		"""
+		if cls._is_base_dtype(lst):
+			return [lst]
+
+		flattened_list = []
+		for elem in lst:
+			flattened_list += cls._flatten_list(elem)
+
+		return flattened_list
+
+	@staticmethod
+	def _multiply_int_list(lst: list[int]) -> int:
 		accum = 1
 		for elem in lst:
 			accum *= elem
@@ -130,7 +152,7 @@ class MiniNumPy:
 		"""Returns a square array of shape (n,n) with ones in its diagonal."""
 		array = cls.zeros((n, n))
 		for i in range(n):
-			array.stored_data[i][i] = 1
+			array.data_array[i][i] = 1
 
 		return array
 
