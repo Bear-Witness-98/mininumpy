@@ -15,7 +15,7 @@ def array(list_or_nested_list: list) -> Array:
 	return Array(list_or_nested_list)
 
 
-def _singular_value_array(cls, shape: tuple[int], value: int | float) -> Array:
+def _singular_value_array(shape: tuple[int], value: int | float) -> Array:
 	"""Builds an array of the specified shape, with given value."""
 	size = 1
 	for dim_length in shape:
@@ -29,7 +29,7 @@ def _singular_value_array(cls, shape: tuple[int], value: int | float) -> Array:
 			current_list_level = [current_value.copy() for _ in range(dim)]
 		current_value = current_list_level
 
-	return cls.array(current_list_level)
+	return array(current_list_level)
 
 
 def zeros(shape: tuple[int]) -> Array:
