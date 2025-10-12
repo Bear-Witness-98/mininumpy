@@ -52,7 +52,7 @@ class Array:
 			for shape, dtype in shape_dtype_list[1:]:
 				if shape != first_shape:
 					raise ValueError("Inconsistent shape between sublists")
-				if first_dtype != dtype:
+				if dtype != first_dtype:
 					raise ValueError("Inconsistent typing between sublists' elements")
 			return (length, *first_shape), first_dtype
 
