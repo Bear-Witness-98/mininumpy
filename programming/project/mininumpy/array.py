@@ -121,27 +121,32 @@ class Array:
 	# dimensions is correct, again, checking numpy's behaviour, it
 	# should be easy.
 	def transpose(self, permutation: tuple[int] | None = None):
+		# sanity check the input
 		if permutation is None:
 			permutation = tuple(reversed(range(self.ndim)))
-
+		if not isinstance(permutation, tuple):
+			raise ValueError("Non tuple, non-None value given as permutation")
 		if set(permutation) != set(range(len(permutation))):
 			raise RuntimeError("Invalid permutation for transposition.")
 
-		# permutation has same behaviour as numpy.
+		# get new shape and empty new data. Same behaviour as numpy.
 		new_shape = tuple(self.shape[p] for p in permutation)
-
-		# initialize empty list for the new, reordered values.
 		new_data = [0 for _ in range(len(self.data_list))]
 
 		idx = tuple(0 for _ in range(self.ndim))
 		for _ in range(self.size):
+			# get index in list for value
 			linear_idx = self._flattened_idx(idx, self.shape)
-			idx_permutation = tuple(idx[p] for p in permutation)
-			permuted_linear_idx = self._flattened_idx(idx_permutation, new_shape)
-			new_data[permuted_linear_idx] = self.data_list[linear_idx]
+
+			# compute corresponding idx in new array, and its linearization
+			new_idx = tuple(idx[p] for p in permutation)
+			new_linear_idx = self._flattened_idx(new_idx, new_shape)
+
+			# copy corresponding values and increment idx
+			new_data[new_linear_idx] = self.data_list[linear_idx]
 			idx = self._circular_increment_idx(idx, self.shape)
 
-		# update with newly computed variables
+		# update array with new shape and reordered data
 		self.shape = new_shape
 		self.data_list = new_data
 
