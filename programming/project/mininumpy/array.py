@@ -5,7 +5,7 @@ class Array:
 	"""Array to implement lite version of Numpy."""
 
 	data: memoryview
-	data_list = list
+	data_list: list
 	shape: tuple[int]
 	dtype: type[int] | type[float] | type[None]
 	ndim: int
