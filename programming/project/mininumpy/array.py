@@ -56,6 +56,7 @@ class Array:
 					raise ValueError("Inconsistent typing between sublists' elements")
 			return (length, *first_shape), first_dtype
 
+		# if it is just a number, return empty tuple and type
 		if cls._is_int_or_float(test_list):
 			return (), type(test_list)
 
@@ -97,16 +98,52 @@ class Array:
 			raise RuntimeError("size of input shape does not correspond to size of current array")
 		self.shape = new_shape
 
+	@classmethod
+	def _flattened_idx(cls, idx: tuple[int], shape: tuple[int]) -> int:
+		# TODO: should do a sanity check here
+		if len(idx) == 1:
+			return idx[-1]
+		return idx[-1] + (shape[-1] * cls._flattened_idx(idx[:-1], shape[:-1]))
+
+	@classmethod
+	def _circular_increment_idx(cls, idx: tuple[int], shape: tuple[int]) -> tuple[int]:
+		if len(idx) == 0:
+			return ()
+
+		if idx[-1] < (shape[-1] - 1):
+			return *idx[:-1], (idx[-1] + 1)
+
+		return *cls._circular_increment_idx(idx[:-1], shape[:-1]), 0
+
 	# From its current shape, and checking that the permutation of
 	# dimensions is correct, again, checking numpy's behaviour, it
 	# should be easy.
 	def transpose(self, permutation: tuple[int] | None = None):
 		if permutation is None:
 			permutation = tuple(reversed(range(self.ndim)))
+
 		if set(permutation) != set(range(len(permutation))):
 			raise RuntimeError("Invalid permutation for transposition.")
 
-		new_shape = (self.shape[p] for p in permutation)
+		# permutation has same behaviour as numpy.
+		new_shape = tuple(self.shape[p] for p in permutation)
+
+		# initialize empty list for the new, reordered values.
+		new_data = [0 for _ in range(len(self.data_list))]
+
+		idx = tuple(0 for _ in range(self.ndim))
+		for _ in range(self.size):
+			linear_idx = self._flattened_idx(idx, self.shape)
+			idx_permutation = tuple(idx[p] for p in permutation)
+			permuted_linear_idx = self._flattened_idx(idx_permutation, new_shape)
+			new_data[permuted_linear_idx] = self.data_list[linear_idx]
+			idx = self._circular_increment_idx(idx, self.shape)
+
+		# update with newly computed variables
+		self.shape = new_shape
+		self.data_list = new_data
+
+		return self
 
 	@classmethod
 	def _unflatten_list(
