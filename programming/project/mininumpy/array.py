@@ -98,6 +98,8 @@ class Array:
 			raise RuntimeError("size of input shape does not correspond to size of current array")
 		self.shape = new_shape
 
+		return self
+
 	@classmethod
 	def _flattened_idx(cls, idx: tuple[int], shape: tuple[int]) -> int:
 		# TODO: should do a sanity check here
