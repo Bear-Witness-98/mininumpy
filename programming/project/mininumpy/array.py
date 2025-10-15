@@ -96,12 +96,25 @@ class Array:
 		# actually store data
 		self.data_list = self._flatten_list(input_list)
 
-	def reshape(self, new_shape: tuple[int]):
+	def copy(self) -> Array:
+		# make empty array
+		new_array = Array([])
+		# populate it with current values
+		new_array.data_list = self.data_list.copy()
+		new_array.shape = tuple(elem for elem in self.shape)
+		new_array.dtype = self.dtype
+		new_array.ndim = self.ndim
+		new_array.size = self.size
+
+		return new_array
+
+	def reshape(self, new_shape: tuple[int]) -> Array:
 		if self._multiply_int_list(new_shape) != self.size:
 			raise RuntimeError("size of input shape does not correspond to size of current array")
-		self.shape = new_shape
+		new_array = self.copy()
+		new_array.shape = new_shape
 
-		return self
+		return new_array
 
 	@classmethod
 	def _flattened_idx(cls, idx: tuple[int], shape: tuple[int]) -> int:
@@ -190,20 +203,10 @@ class Array:
 	__repr__ = __str__
 
 	# elementwise operations
-	def copy(self):
-		# make empty array
-		new_array = Array([])
-		# populate it with current values
-		new_array.data_list = self.data_list.copy()
-		new_array.shape = tuple(elem for elem in self.shape)
-		new_array.dtype = self.dtype
-		new_array.ndim = self.ndim
-		new_array.size = self.size
-
-		return new_array
-
-	# return a copy of the array with elements e^elem
-	def exp(self):
+	def exp(self) -> Array:
+		"""
+		Return a copy of the array with elements e^(elem).
+		"""
 		new_array = self.copy()
 		new_array.data_list = [exp(elem) for elem in new_array.data_list]
 		new_array.dtype = float
@@ -233,4 +236,55 @@ class Array:
 		"""
 		new_array = self.copy()
 		new_array.data_list = [abs(elem) for elem in new_array.data_list]
+		return new_array
+
+	# binary operations
+	def __add__(self, array2: Array) -> Array:
+		if self.shape != array2.shape:
+			# attempt a broadcast here
+			raise ("Arrays of different shapes could not be broadcasted together")
+		new_array = self.copy()
+		new_array.data_list = [
+			elem1 + elem2 for elem1, elem2 in zip(self.data_list, array2.data_list)
+		]
+		return new_array
+
+	def __sub__(self, array2: Array) -> Array:
+		if self.shape != array2.shape:
+			# attempt a broadcast here
+			raise ("Arrays of different shapes could not be broadcasted together")
+		new_array = self.copy()
+		new_array.data_list = [
+			elem1 - elem2 for elem1, elem2 in zip(self.data_list, array2.data_list)
+		]
+		return new_array
+
+	def __mul__(self, array2: Array) -> Array:
+		if self.shape != array2.shape:
+			# attempt a broadcast here
+			raise ("Arrays of different shapes could not be broadcasted together")
+		new_array = self.copy()
+		new_array.data_list = [
+			elem1 * elem2 for elem1, elem2 in zip(self.data_list, array2.data_list)
+		]
+		return new_array
+
+	def __truediv__(self, array2: Array) -> Array:
+		if self.shape != array2.shape:
+			# attempt a broadcast here
+			raise ("Arrays of different shapes could not be broadcasted together")
+		new_array = self.copy()
+		new_array.data_list = [
+			elem1 / elem2 for elem1, elem2 in zip(self.data_list, array2.data_list)
+		]
+		return new_array
+
+	def __pow__(self, array2: Array) -> Array:
+		if self.shape != array2.shape:
+			# attempt a broadcast here
+			raise ("Arrays of different shapes could not be broadcasted together")
+		new_array = self.copy()
+		new_array.data_list = [
+			elem1**elem2 for elem1, elem2 in zip(self.data_list, array2.data_list)
+		]
 		return new_array
