@@ -1,4 +1,6 @@
 # File with the implementation of the array type.
+from __future__ import annotations
+
 from math import exp, log, sqrt
 
 
@@ -118,7 +120,7 @@ class Array:
 
 		return *cls._circular_increment_idx(idx[:-1], shape[:-1]), 0
 
-	def transpose(self, permutation: tuple[int] | None = None):
+	def transpose(self, permutation: tuple[int] | None = None) -> Array:
 		# sanity check the input
 		if permutation is None:
 			permutation = tuple(reversed(range(self.ndim)))
@@ -182,7 +184,7 @@ class Array:
 		return unflattend_list
 
 	# for pretty printing purposes
-	def __str__(self):
+	def __str__(self) -> str:
 		return self._unflatten_list(self.data_list, self.shape).__str__()
 
 	__repr__ = __str__
@@ -207,22 +209,28 @@ class Array:
 		new_array.dtype = float
 		return new_array
 
-	# return a copy of the array with elements log_e(elem)
-	def log(self):
+	def log(self) -> Array:
+		"""
+		Return a copy of the array with elements log_e(elem).
+		"""
 		new_array = self.copy()
 		new_array.data_list = [log(elem) for elem in new_array.data_list]
 		new_array.dtype = float
 		return new_array
 
-	# return a copy of the array with elements sqrt(elem)
-	def sqrt(self):
+	def sqrt(self) -> Array:
+		"""
+		Return a copy of the array with elements sqrt(elem).
+		"""
 		new_array = self.copy()
 		new_array.data_list = [sqrt(elem) for elem in new_array.data_list]
 		new_array.dtype = float
 		return new_array
 
-	# return a copy of the array with elements abs(elem)
-	def abs(self):
+	def abs(self) -> Array:
+		"""
+		Return a copy of the array with elements abs(elem).
+		"""
 		new_array = self.copy()
 		new_array.data_list = [abs(elem) for elem in new_array.data_list]
 		return new_array
