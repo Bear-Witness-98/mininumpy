@@ -118,9 +118,6 @@ class Array:
 
 		return *cls._circular_increment_idx(idx[:-1], shape[:-1]), 0
 
-	# From its current shape, and checking that the permutation of
-	# dimensions is correct, again, checking numpy's behaviour, it
-	# should be easy.
 	def transpose(self, permutation: tuple[int] | None = None):
 		# sanity check the input
 		if permutation is None:
