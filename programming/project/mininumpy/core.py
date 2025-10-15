@@ -97,21 +97,30 @@ def linspace(start: float, stop: float, num: int) -> Array:
 	return array(base_list)
 
 
-# return a copy of the array with elements e^elem
+# element-wise operations
 def exp(array: Array) -> Array:
+	"""
+	Return a copy of the array with elements e^(elem).
+	"""
 	return array.exp()
 
 
-# return a copy of the array with elements log_e(elem)
 def log(array: Array) -> Array:
+	"""
+	Return a copy of the array with elements log_e(elem).
+	"""
 	return array.log()
 
 
-# return a copy of the array with elements sqrt(elem)
 def sqrt(array: Array) -> Array:
+	"""
+	Return a copy of the array with elements sqrt(elem).
+	"""
 	return array.sqrt()
 
 
-# return a copy of the array with elements abs(elem)
 def abs(array: Array) -> Array:
+	"""
+	Return a copy of the array with elements abs(elem).
+	"""
 	return array.abs()
