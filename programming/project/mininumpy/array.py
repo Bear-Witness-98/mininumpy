@@ -16,6 +16,9 @@ class Array:
 
 	@staticmethod
 	def _multiply_int_list(lst: list[int]) -> int:
+		"""
+		An empty list here outputs 1
+		"""
 		accum = 1
 		for elem in lst:
 			accum *= elem
@@ -68,7 +71,7 @@ class Array:
 	@classmethod
 	def _flatten_list(cls, lst: list | int | float) -> list:
 		"""
-		Flatten list (check if this may correspond with C or Fortran style memory storing.)
+		Flatten list.
 		"""
 		if cls._is_int_or_float(lst):
 			return [lst]
@@ -85,7 +88,7 @@ class Array:
 		Creates Array object from given list,
 
 		This class only accepts same type (int or float) multi-nested arrays of homegenous
-		dimension. If the input list does not match these conditions, and exception will be raised
+		dimension. If the input list does not match these conditions, a ValueError will be raised
 		at runtime.
 		"""
 
@@ -97,7 +100,9 @@ class Array:
 		self.data_list = self._flatten_list(input_list)
 
 	def copy(self) -> Array:
-		# make empty array
+		"""
+		Make a copy of the current instance.
+		"""
 		new_array = Array([])
 		# populate it with current values
 		new_array.data_list = self.data_list.copy()
@@ -109,6 +114,11 @@ class Array:
 		return new_array
 
 	def reshape(self, new_shape: tuple[int]) -> Array:
+		"""
+		Reshapes array to given new_shape.
+
+		If the size of new_shape does not match self.size, a RuntimeError will be rised.
+		"""
 		if self._multiply_int_list(new_shape) != self.size:
 			raise RuntimeError("size of input shape does not correspond to size of current array")
 		new_array = self.copy()
@@ -118,6 +128,22 @@ class Array:
 
 	@classmethod
 	def _flattened_idx(cls, idx: tuple[int], shape: tuple[int]) -> int:
+		"""
+		Converts an multidimensional index into a linear one for internal data representation.
+
+		If (d_0, ..., d_(k-1)) is the shape of the array, then a multidimensional index is a tuple
+		I = (i_0, ..., i_(k-1)) with i_j in the range (0, ..., d_j).
+
+		The corresponding linear index for I is:
+		lin_idx_(k+1) = i_k + d_k( i_(k-1) + d_(k-1)( ... i_1 + d_1(i_0) ...))
+
+		This linearized index for a k-dimensional array can be computed recursively by the
+		recursive sequence:
+		lin_idx_0 = i_0
+		lin_idx_n = i_n + d_n*lin_idx_(n_1)
+
+		Notice that for these computations
+		"""
 		# TODO: should do a sanity check here
 		if len(idx) == 1:
 			return idx[-1]
@@ -125,6 +151,14 @@ class Array:
 
 	@classmethod
 	def _circular_increment_idx(cls, idx: tuple[int], shape: tuple[int]) -> tuple[int]:
+		"""
+		Increment the multidimensional idx of an array in 1.
+
+		This operation is defined so that it adds one to the last idx position, and in case
+		of overflow, it carries a +1 to the previous idx position.
+
+		It is implemented in a circular manner for implementation reasons.
+		"""
 		if len(idx) == 0:
 			return ()
 
