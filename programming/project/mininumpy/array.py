@@ -1,4 +1,5 @@
 # File with the implementation of the array type.
+from math import exp, log, sqrt
 
 
 class Array:
@@ -188,3 +189,43 @@ class Array:
 		return self._unflatten_list(self.data_list, self.shape).__str__()
 
 	__repr__ = __str__
+
+	# elementwise operations
+	def copy(self):
+		# make empty array
+		new_array = Array([])
+		# populate it with current values
+		new_array.data_list = self.data_list.copy()
+		new_array.shape = tuple(elem for elem in self.shape)
+		new_array.dtype = self.dtype
+		new_array.ndim = self.ndim
+		new_array.size = self.size
+
+		return new_array
+
+	# return a copy of the array with elements e^elem
+	def exp(self):
+		new_array = self.copy()
+		new_array.data_list = [exp(elem) for elem in new_array.data_list]
+		new_array.dtype = float
+		return new_array
+
+	# return a copy of the array with elements log_e(elem)
+	def log(self):
+		new_array = self.copy()
+		new_array.data_list = [log(elem) for elem in new_array.data_list]
+		new_array.dtype = float
+		return new_array
+
+	# return a copy of the array with elements sqrt(elem)
+	def sqrt(self):
+		new_array = self.copy()
+		new_array.data_list = [sqrt(elem) for elem in new_array.data_list]
+		new_array.dtype = float
+		return new_array
+
+	# return a copy of the array with elements abs(elem)
+	def abs(self):
+		new_array = self.copy()
+		new_array.data_list = [abs(elem) for elem in new_array.data_list]
+		return new_array
