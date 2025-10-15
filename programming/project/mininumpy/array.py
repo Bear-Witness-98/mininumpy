@@ -159,11 +159,12 @@ class Array:
 			new_data[new_linear_idx] = self.data_list[linear_idx]
 			idx = self._circular_increment_idx(idx, self.shape)
 
-		# update array with new shape and reordered data
-		self.shape = new_shape
-		self.data_list = new_data
+		# Create new_array and return it with new shape and list
+		new_array = self.copy()
+		new_array.shape = new_shape
+		new_array.data_list = new_data
 
-		return self
+		return new_array
 
 	@classmethod
 	def _unflatten_list(
