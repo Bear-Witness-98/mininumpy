@@ -1,5 +1,5 @@
 # File with the implementation of the array type.
-from __future__ import annotations  # for typehinting
+from __future__ import annotations  # for typehinting the Array class within itself
 
 from math import exp, log, sqrt
 
@@ -273,10 +273,12 @@ class Array:
 		new_array.data_list = [abs(elem) for elem in new_array.data_list]
 		return new_array
 
+	# binary operations
 	@staticmethod
-	def _are_broadcastable(shape1: tuple[int], shape2: tuple[int]) -> bool:
+	def _broadcast_shapes(shape1: tuple[int], shape2: tuple[int]) -> bool:
 		"""
-		Checks if two shapes are broadcastable into one another.
+		Returns the shape into which both input shapes could be broadcasted.
+		Raises ValueError if the shapes cannot be broadcasted together.
 
 		The condition is that, starting from the rightmost dimension either:
 		1) the dimensions must match
@@ -285,22 +287,87 @@ class Array:
 		One can extend a shape with trailing ones up to the length of the
 		shape with more dimensions.
 		"""
-		min_length = min(len(shape1), len(shape2))
+		broadcasted_shape = ()
+		smaller_array, bigger_array = (
+			(shape1, shape2) if (len(shape1) < len(shape2)) else (shape2, shape1)
+		)
+		min_length = len(smaller_array)
+		max_length = len(bigger_array)
+
+		# check if the corresponding rightmost dimensions match, and store them.
 		for idx in range(min_length):
 			dim = -1 - idx
-			# this could also be {shape1[dim]} xor {shape2[dim]} xor {1} != {}
-			is_dim_compatible = (shape1[dim] == shape2[dim]) or set(1).intersection(
-				set(shape1[dim], shape2[dim])
+			# this could also be ({shape1[dim]} xor {shape2[dim]} xor {1}) != {}
+			is_dim_compatible = (shape1[dim] == shape2[dim]) or {1}.intersection(
+				{shape1[dim], shape2[dim]}
 			)
 			if not is_dim_compatible:
-				return False
-		return True
+				raise ValueError(
+					f"Arrays of shape {shape1} and {shape2} cannot be broadcasted together."
+				)
+			broadcasted_shape = (max(shape1[dim], shape2[dim]),) + broadcasted_shape
 
-	# binary operations
+		# copy the remaining dims of the larger shape
+		remainin_dims = bigger_array[0 : max_length - min_length]
+		broadcasted_shape = remainin_dims + broadcasted_shape
+		return broadcasted_shape
+
+	def _broadcast_back_multi_idx_to_shape(
+		self,
+		multi_idx: tuple[int],
+		shape: tuple[int],
+	) -> tuple[int]:
+		starting_dim = len(multi_idx) - len(shape)
+		new_mulit_idx = list(multi_idx[starting_dim:])
+		for idx, (dim, dim_value) in enumerate(zip(shape, new_mulit_idx)):
+			if dim_value > dim:
+				new_mulit_idx[idx] = 1
+		return tuple(new_mulit_idx)
+
+	def _operation_with_broadcasting(
+		self,
+		array1: Array,
+		array2: Array,
+		new_dtype: type[int] | type[float] | type[None],
+	) -> None:
+		# get shape of, and create new array
+		new_array = Array([])
+		new_array.shape = self._broadcast_shapes(array1.shape, array2.shape)
+		new_array.ndim = len(new_array.shape)
+		new_array.size = self._multiply_int_list(new_array.shape)
+		new_array.dtype = new_dtype
+		new_array.data_list = [0 for _ in range(new_array.size)]
+
+		# create starting multi-idx, and iterate over all possible values
+		multi_idx = tuple([0 for _ in new_array.shape])
+		print(new_array.shape)
+		print("====================================")
+		for _ in range(new_array.size):
+			# get value for first array
+			print("++++++++++++++++++++++++++++++++++++")
+			print(multi_idx)
+			array1_multi_idx = self._broadcast_back_multi_idx_to_shape(multi_idx, array1.shape)
+			array1_idx = self._flattened_idx(array1_multi_idx, array1.shape)
+			print(array1_multi_idx)
+			print(array1_idx)
+			array1_value = array1.data_list[array1_idx]
+			# get value for second array
+			array2_multi_idx = self._broadcast_back_multi_idx_to_shape(multi_idx, array2.shape)
+			array2_idx = self._flattened_idx(array2_multi_idx, array2.shape)
+			array2_value = array2.data_list[array2_idx]
+			# update value on new array
+			new_array_idx = self._flattened_idx(multi_idx, new_array.shape)
+			new_array.data_list[new_array_idx] = array1_value + array2_value
+			# increase the general idx
+			multi_idx = self._circular_increment_idx(multi_idx, new_array.shape)
+
+		return new_array
+
 	def __add__(self, array2: Array) -> Array:
+		# return self._operation_with_broadcasting(self, array2, float)
 		if self.shape != array2.shape:
 			# attempt a broadcast here
-			raise ("Arrays of different shapes could not be broadcasted together")
+			raise ValueError("Arrays of different shapes could not be broadcasted together")
 		new_array = self.copy()
 		new_array.data_list = [
 			elem1 + elem2 for elem1, elem2 in zip(self.data_list, array2.data_list)
@@ -310,7 +377,7 @@ class Array:
 	def __sub__(self, array2: Array) -> Array:
 		if self.shape != array2.shape:
 			# attempt a broadcast here
-			raise ("Arrays of different shapes could not be broadcasted together")
+			raise ValueError("Arrays of different shapes could not be broadcasted together")
 		new_array = self.copy()
 		new_array.data_list = [
 			elem1 - elem2 for elem1, elem2 in zip(self.data_list, array2.data_list)
@@ -320,7 +387,7 @@ class Array:
 	def __mul__(self, array2: Array) -> Array:
 		if self.shape != array2.shape:
 			# attempt a broadcast here
-			raise ("Arrays of different shapes could not be broadcasted together")
+			raise ValueError("Arrays of different shapes could not be broadcasted together")
 		new_array = self.copy()
 		new_array.data_list = [
 			elem1 * elem2 for elem1, elem2 in zip(self.data_list, array2.data_list)
@@ -330,7 +397,7 @@ class Array:
 	def __truediv__(self, array2: Array) -> Array:
 		if self.shape != array2.shape:
 			# attempt a broadcast here
-			raise ("Arrays of different shapes could not be broadcasted together")
+			raise ValueError("Arrays of different shapes could not be broadcasted together")
 		new_array = self.copy()
 		new_array.data_list = [
 			elem1 / elem2 for elem1, elem2 in zip(self.data_list, array2.data_list)
@@ -340,7 +407,7 @@ class Array:
 	def __pow__(self, array2: Array) -> Array:
 		if self.shape != array2.shape:
 			# attempt a broadcast here
-			raise ("Arrays of different shapes could not be broadcasted together")
+			raise ValueError("Arrays of different shapes could not be broadcasted together")
 		new_array = self.copy()
 		new_array.data_list = [
 			elem1**elem2 for elem1, elem2 in zip(self.data_list, array2.data_list)
