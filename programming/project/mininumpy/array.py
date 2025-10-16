@@ -1,5 +1,5 @@
 # File with the implementation of the array type.
-from __future__ import annotations
+from __future__ import annotations  # for typehinting
 
 from math import exp, log, sqrt
 
@@ -272,6 +272,29 @@ class Array:
 		new_array = self.copy()
 		new_array.data_list = [abs(elem) for elem in new_array.data_list]
 		return new_array
+
+	@staticmethod
+	def _are_broadcastable(shape1: tuple[int], shape2: tuple[int]) -> bool:
+		"""
+		Checks if two shapes are broadcastable into one another.
+
+		The condition is that, starting from the rightmost dimension either:
+		1) the dimensions must match
+		2) one of the dimensions is 1
+
+		One can extend a shape with trailing ones up to the length of the
+		shape with more dimensions.
+		"""
+		min_length = min(len(shape1), len(shape2))
+		for idx in range(min_length):
+			dim = -1 - idx
+			# this could also be {shape1[dim]} xor {shape2[dim]} xor {1} != {}
+			is_dim_compatible = (shape1[dim] == shape2[dim]) or set(1).intersection(
+				set(shape1[dim], shape2[dim])
+			)
+			if not is_dim_compatible:
+				return False
+		return True
 
 	# binary operations
 	def __add__(self, array2: Array) -> Array:
