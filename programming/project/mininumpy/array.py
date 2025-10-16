@@ -404,22 +404,37 @@ class Array:
 
 		return new_array
 
-	def __add__(self, right_operand: Array) -> Array:
+	def __add__(self, right_operand: Array | int | float) -> Array:
+		right_operand = (
+			Array([right_operand]) if self._is_int_or_float(right_operand) else right_operand
+		)
 		new_type = float if float in {self.dtype, right_operand.dtype} else int
 		return self._operation_with_broadcasting(self, right_operand, "add", new_type)
 
-	def __sub__(self, right_operand: Array) -> Array:
+	def __sub__(self, right_operand: Array | int | float) -> Array:
+		right_operand = (
+			Array([right_operand]) if self._is_int_or_float(right_operand) else right_operand
+		)
 		new_type = float if float in {self.dtype, right_operand.dtype} else int
 		return self._operation_with_broadcasting(self, right_operand, "sub", new_type)
 
-	def __mul__(self, right_operand: Array) -> Array:
+	def __mul__(self, right_operand: Array | int | float) -> Array:
+		right_operand = (
+			Array([right_operand]) if self._is_int_or_float(right_operand) else right_operand
+		)
 		new_type = float if float in {self.dtype, right_operand.dtype} else int
 		return self._operation_with_broadcasting(self, right_operand, "mul", new_type)
 
-	def __truediv__(self, right_operand: Array) -> Array:
+	def __truediv__(self, right_operand: Array | int | float) -> Array:
+		right_operand = (
+			Array([right_operand]) if self._is_int_or_float(right_operand) else right_operand
+		)
 		return self._operation_with_broadcasting(self, right_operand, "truediv", float)
 
-	def __pow__(self, right_operand: Array) -> Array:
+	def __pow__(self, right_operand: Array | int | float) -> Array:
+		right_operand = (
+			Array([right_operand]) if self._is_int_or_float(right_operand) else right_operand
+		)
 		new_type = float if float in {self.dtype, right_operand.dtype} else int
 		return self._operation_with_broadcasting(self, right_operand, "pow", new_type)
 
