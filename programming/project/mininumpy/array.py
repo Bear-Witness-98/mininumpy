@@ -9,8 +9,8 @@ class Array:
 
 	data: memoryview
 	data_list: list
-	shape: tuple[int]
 	dtype: type[int] | type[float] | type[None]
+	shape: tuple[int]
 	ndim: int
 	size: int
 
@@ -30,7 +30,7 @@ class Array:
 
 	# TODO: evaluate empty list edge case
 	@classmethod
-	def _get_list_shape(
+	def _get_shape_and_type(
 		cls,
 		test_list: int | float | list[int | float | None],
 	) -> tuple[tuple[int], type[int] | type[float] | type[None]]:
@@ -52,7 +52,7 @@ class Array:
 			if length == 0:
 				return ((0,), None)
 
-			shape_dtype_list = [cls._get_list_shape(elem) for elem in test_list]
+			shape_dtype_list = [cls._get_shape_and_type(elem) for elem in test_list]
 			first_shape = shape_dtype_list[0][0]
 			first_dtype = shape_dtype_list[0][1]
 			for shape, dtype in shape_dtype_list[1:]:
@@ -83,6 +83,7 @@ class Array:
 		return flattened_list
 
 	# TODO: get the memoryview thing correctly if necessary.
+	# TODO: sanitize the input
 	def __init__(self, input_list: list[int | float]):
 		"""
 		Creates Array object from given list,
@@ -92,13 +93,14 @@ class Array:
 		at runtime.
 		"""
 
-		self.shape, self.dtype = self._get_list_shape(input_list)
+		self.shape, self.dtype = self._get_shape_and_type(input_list)
 		self.ndim = len(self.shape)  # in case of empty list input, ndim = 1 (same as numpy)
 		self.size = self._multiply_int_list(self.shape)
 
 		# actually store data
 		self.data_list = self._flatten_list(input_list)
 
+	# convenience methods
 	def copy(self) -> Array:
 		"""
 		Make a copy of the current instance.
@@ -106,13 +108,30 @@ class Array:
 		new_array = Array([])
 		# populate it with current values
 		new_array.data_list = self.data_list.copy()
-		new_array.shape = tuple(elem for elem in self.shape)
 		new_array.dtype = self.dtype
+		new_array.shape = tuple(elem for elem in self.shape)
 		new_array.ndim = self.ndim
 		new_array.size = self.size
 
 		return new_array
 
+	@classmethod
+	def array_from_shape(cls, shape: tuple[int]) -> Array:
+		"""
+		Returns zero-filled array of given shape
+		"""
+		new_array = Array([])
+
+		new_array.shape = shape
+		new_array.ndim = len(shape)
+		new_array.size = cls._multiply_int_list(shape)
+
+		new_array.data_list = [0 for _ in new_array.size]
+		new_array.dtype = int
+
+		return new_array
+
+	# TODO: sanitise the input for it to be a tuple of ints
 	def reshape(self, new_shape: tuple[int]) -> Array:
 		"""
 		Reshapes array to given new_shape.
@@ -120,16 +139,17 @@ class Array:
 		If the size of new_shape does not match self.size, a RuntimeError will be rised.
 		"""
 		if self._multiply_int_list(new_shape) != self.size:
-			raise RuntimeError("size of input shape does not correspond to size of current array")
+			raise RuntimeError("Size of input shape does not correspond to size of current array")
 		new_array = self.copy()
 		new_array.shape = new_shape
 
 		return new_array
 
 	@classmethod
-	def _flattened_idx(cls, idx: tuple[int], shape: tuple[int]) -> int:
+	def _flatten_multi_idx(cls, idx: tuple[int], shape: tuple[int]) -> int:
 		"""
 		Converts an multidimensional index into a linear one for internal data representation.
+		It uses the shape to compute the appropriate strides.
 
 		If (d_0, ..., d_(k-1)) is the shape of the array, then a multidimensional index is a tuple
 		I = (i_0, ..., i_(k-1)) with i_j in the range (0, ..., d_j).
@@ -147,17 +167,17 @@ class Array:
 		# TODO: should do a sanity check here
 		if len(idx) == 1:
 			return idx[-1]
-		return idx[-1] + (shape[-1] * cls._flattened_idx(idx[:-1], shape[:-1]))
+		return idx[-1] + (shape[-1] * cls._flatten_multi_idx(idx[:-1], shape[:-1]))
 
 	@classmethod
-	def _circular_increment_idx(cls, idx: tuple[int], shape: tuple[int]) -> tuple[int]:
+	def _circular_increment_multi_idx(cls, idx: tuple[int], shape: tuple[int]) -> tuple[int]:
 		"""
-		Increment the multidimensional idx of an array in 1.
+		Increment the multidimensional idx of an array by 1, given its shape.
 
 		This operation is defined so that it adds one to the last idx position, and in case
 		of overflow, it carries a +1 to the previous idx position.
 
-		It is implemented in a circular manner for implementation reasons.
+		It is implemented in a circular manner for simplification purposes.
 		"""
 		if len(idx) == 0:
 			return ()
@@ -165,7 +185,7 @@ class Array:
 		if idx[-1] < (shape[-1] - 1):
 			return *idx[:-1], (idx[-1] + 1)
 
-		return *cls._circular_increment_idx(idx[:-1], shape[:-1]), 0
+		return *cls._circular_increment_multi_idx(idx[:-1], shape[:-1]), 0
 
 	def transpose(self, permutation: tuple[int] | None = None) -> Array:
 		# sanity check the input
@@ -183,15 +203,15 @@ class Array:
 		idx = tuple(0 for _ in range(self.ndim))
 		for _ in range(self.size):
 			# get index in list for value
-			linear_idx = self._flattened_idx(idx, self.shape)
+			linear_idx = self._flatten_multi_idx(idx, self.shape)
 
 			# compute corresponding idx in new array, and its linearization
 			new_idx = tuple(idx[p] for p in permutation)
-			new_linear_idx = self._flattened_idx(new_idx, new_shape)
+			new_linear_idx = self._flatten_multi_idx(new_idx, new_shape)
 
 			# copy corresponding values and increment idx
 			new_data[new_linear_idx] = self.data_list[linear_idx]
-			idx = self._circular_increment_idx(idx, self.shape)
+			idx = self._circular_increment_multi_idx(idx, self.shape)
 
 		# Create new_array and return it with new shape and list
 		new_array = self.copy()
@@ -207,7 +227,7 @@ class Array:
 		shape: tuple[int],
 	) -> list:
 		"""
-		Unflattens given list to specified shape.
+		Unflattens given list given specific shape.
 		"""
 		# sanity assertion
 		if cls._multiply_int_list(shape) != len(flattened_list):
@@ -275,7 +295,7 @@ class Array:
 
 	# binary operations
 	@staticmethod
-	def _broadcast_shapes(shape1: tuple[int], shape2: tuple[int]) -> bool:
+	def _broadcast_shapes(shape1: tuple[int], shape2: tuple[int]) -> tuple[int]:
 		"""
 		Returns the shape into which both input shapes could be broadcasted.
 		Raises ValueError if the shapes cannot be broadcasted together.
@@ -317,6 +337,11 @@ class Array:
 		multi_idx: tuple[int],
 		shape: tuple[int],
 	) -> tuple[int]:
+		"""
+		Given a multi index, it is unbroadcasted back into the given shape of array.
+
+		It must happen that the array with given shape must be broadcastable into
+		"""
 		starting_dim = len(multi_idx) - len(shape)
 		new_mulit_idx = list(multi_idx[starting_dim:])
 		for idx, (dim, dim_value) in enumerate(zip(shape, new_mulit_idx)):
@@ -347,19 +372,19 @@ class Array:
 			print("++++++++++++++++++++++++++++++++++++")
 			print(multi_idx)
 			array1_multi_idx = self._broadcast_back_multi_idx_to_shape(multi_idx, array1.shape)
-			array1_idx = self._flattened_idx(array1_multi_idx, array1.shape)
+			array1_idx = self._flatten_multi_idx(array1_multi_idx, array1.shape)
 			print(array1_multi_idx)
 			print(array1_idx)
 			array1_value = array1.data_list[array1_idx]
 			# get value for second array
 			array2_multi_idx = self._broadcast_back_multi_idx_to_shape(multi_idx, array2.shape)
-			array2_idx = self._flattened_idx(array2_multi_idx, array2.shape)
+			array2_idx = self._flatten_multi_idx(array2_multi_idx, array2.shape)
 			array2_value = array2.data_list[array2_idx]
 			# update value on new array
-			new_array_idx = self._flattened_idx(multi_idx, new_array.shape)
+			new_array_idx = self._flatten_multi_idx(multi_idx, new_array.shape)
 			new_array.data_list[new_array_idx] = array1_value + array2_value
 			# increase the general idx
-			multi_idx = self._circular_increment_idx(multi_idx, new_array.shape)
+			multi_idx = self._circular_increment_multi_idx(multi_idx, new_array.shape)
 
 		return new_array
 
