@@ -318,8 +318,8 @@ class Array:
 		for idx in range(min_length):
 			dim = -1 - idx
 			# this could also be ({shape1[dim]} xor {shape2[dim]} xor {1}) != {}
-			is_dim_compatible = (shape1[dim] == shape2[dim]) or {1}.intersection(
-				{shape1[dim], shape2[dim]}
+			is_dim_compatible = (
+				(shape1[dim] == shape2[dim]) or (shape1[dim] == 1) or (shape2[dim] == 1)
 			)
 			if not is_dim_compatible:
 				raise ValueError(
@@ -328,8 +328,8 @@ class Array:
 			broadcasted_shape = (max(shape1[dim], shape2[dim]),) + broadcasted_shape
 
 		# copy the remaining dims of the larger shape
-		remainin_dims = bigger_array[0 : max_length - min_length]
-		broadcasted_shape = remainin_dims + broadcasted_shape
+		remaining_dims = bigger_array[0 : max_length - min_length]
+		broadcasted_shape = remaining_dims + broadcasted_shape
 		return broadcasted_shape
 
 	def _broadcast_back_multi_idx_to_shape(
@@ -340,7 +340,7 @@ class Array:
 		"""
 		Given a multi index, it is unbroadcasted back into the given shape of array.
 
-		It must happen that the array with given shape must be broadcastable into
+		It must happen that the array with given shape must be broadcastable into (what?)
 		"""
 		starting_dim = len(multi_idx) - len(shape)
 		new_mulit_idx = list(multi_idx[starting_dim:])
@@ -355,16 +355,18 @@ class Array:
 		array2: Array,
 		new_dtype: type[int] | type[float] | type[None],
 	) -> None:
-		# get shape of, and create new array
-		new_array = Array([])
-		new_array.shape = self._broadcast_shapes(array1.shape, array2.shape)
-		new_array.ndim = len(new_array.shape)
-		new_array.size = self._multiply_int_list(new_array.shape)
-		new_array.dtype = new_dtype
-		new_array.data_list = [0 for _ in range(new_array.size)]
+		"""
+		Performs a dummy binary operation between array1 and array2.
 
-		# create starting multi-idx, and iterate over all possible values
-		multi_idx = tuple([0 for _ in new_array.shape])
+		New dtype expected must be given.
+		"""
+		# get shape of, and create new array
+		new_shape = self._broadcast_shapes(array1.shape, array2.shape)
+		new_array = self.array_from_shape(new_shape)
+		new_array.dtype = new_dtype
+
+		# create starting multi-idx, to iterate over all its possible values
+		multi_idx = tuple([0 for _ in new_shape])
 		print(new_array.shape)
 		print("====================================")
 		for _ in range(new_array.size):
