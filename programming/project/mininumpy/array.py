@@ -126,7 +126,7 @@ class Array:
 		new_array.ndim = len(shape)
 		new_array.size = cls._multiply_int_list(shape)
 
-		new_array.data_list = [0 for _ in new_array.size]
+		new_array.data_list = [0 for _ in range(new_array.size)]
 		new_array.dtype = int
 
 		return new_array
@@ -345,8 +345,8 @@ class Array:
 		starting_dim = len(multi_idx) - len(shape)
 		new_mulit_idx = list(multi_idx[starting_dim:])
 		for idx, (dim, dim_value) in enumerate(zip(shape, new_mulit_idx)):
-			if dim_value > dim:
-				new_mulit_idx[idx] = 1
+			if dim_value > (dim - 1):
+				new_mulit_idx[idx] = 0
 		return tuple(new_mulit_idx)
 
 	def _operation_with_broadcasting(
@@ -391,7 +391,7 @@ class Array:
 		return new_array
 
 	def __add__(self, array2: Array) -> Array:
-		# return self._operation_with_broadcasting(self, array2, float)
+		return self._operation_with_broadcasting(self, array2, float)
 		if self.shape != array2.shape:
 			# attempt a broadcast here
 			raise ValueError("Arrays of different shapes could not be broadcasted together")
