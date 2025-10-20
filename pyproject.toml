@@ -24,6 +24,10 @@ dev = [
 	"ipython==9.6.0",
 	"ipdb==0.13.13",
 ]
+test = [
+	"pytest==8.4.2",
+	"numpy==2.4.3",
+]
 
 [project.urls]
 Homepage = "https://github.com/Bear-Witness-98/mininumpy"
