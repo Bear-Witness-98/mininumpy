@@ -1,3 +1,5 @@
-# University work
+# General notes on the development of MiniNumPy
 
-This repository will contain as much of my university work as I deem necessary.
+* Ruff does not works well if installed from wsl, and try to use it in
+	a windows-opened vscode. Even though the vscode itself got triggered
+	from wsl itself.
