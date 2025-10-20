@@ -16,9 +16,19 @@ classifiers = [
 ]
 license = "MIT"
 
+# dependencies = []
+
+[project.optional-dependencies]
+dev = [
+	"ruff==0.13.3",
+	"ipython==9.6.0",
+	"ipdb==0.13.13",
+]
+
 [project.urls]
 Homepage = "https://github.com/Bear-Witness-98/mininumpy"
 Issues = "https://github.com/Bear-Witness-98/mininumpy/issues"
+
 
 [tool.ruff]
 line-length = 100
@@ -31,3 +41,8 @@ quote-style = "double"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 docstring-code-format = true
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = [
+    "F401", # remove unused imports for init file
+]
