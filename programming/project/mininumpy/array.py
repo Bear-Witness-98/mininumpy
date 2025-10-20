@@ -469,3 +469,117 @@ class Array:
 			multi_idx = self._circular_increment_multi_idx(multi_idx, self.shape)
 
 		return new_array
+
+	def sum(self, axis: tuple[int] | None = None) -> Array:
+		if axis is None:
+			axis = (-1,)
+		if not isinstance(axis, tuple):
+			raise ValueError("Axis given is not a tuple of int or None.")
+
+		# TODO: further sanity checking is necessary.
+		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
+		new_array = self.array_from_shape(new_shape)
+
+		# create starting multi-idx, to iterate over all its possible values
+		multi_idx = tuple([0 for _ in self.shape])
+		for _ in range(self.size):
+			current_value = self.data_list[self._flatten_multi_idx(multi_idx, self.shape)]
+			adapted_multi_idx = [elem for idx, elem in enumerate(multi_idx) if idx not in axis]
+			stored_value = new_array.data_list[
+				self._flatten_multi_idx(adapted_multi_idx, new_shape)
+			]
+
+			new_array.data_list[self._flatten_multi_idx(adapted_multi_idx, new_shape)] = (
+				stored_value + current_value
+			)
+
+			multi_idx = self._circular_increment_multi_idx(multi_idx, self.shape)
+
+		return new_array
+
+	def mean(self, axis: tuple[int] | None = None) -> Array:
+		if axis is None:
+			axis = (-1,)
+		if not isinstance(axis, tuple):
+			raise ValueError("Axis given is not a tuple of int or None.")
+
+		# TODO: further sanity checking is necessary.
+		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
+		new_array = self.array_from_shape(new_shape)
+
+		# create starting multi-idx, to iterate over all its possible values
+		multi_idx = tuple([0 for _ in self.shape])
+		for _ in range(self.size):
+			current_value = self.data_list[self._flatten_multi_idx(multi_idx, self.shape)]
+			adapted_multi_idx = [elem for idx, elem in enumerate(multi_idx) if idx not in axis]
+			stored_value = new_array.data_list[
+				self._flatten_multi_idx(adapted_multi_idx, new_shape)
+			]
+
+			new_array.data_list[self._flatten_multi_idx(adapted_multi_idx, new_shape)] = (
+				stored_value + current_value
+			)
+
+			multi_idx = self._circular_increment_multi_idx(multi_idx, self.shape)
+
+		denominator = self._multiply_int_list(
+			[elem for idx, elem in enumerate(self.shape) if idx in axis]
+		)
+
+		new_array.data_list = [elem / denominator for elem in new_array.data_list]
+
+		return new_array
+
+	def max(self, axis: tuple[int] | None = None) -> Array:
+		if axis is None:
+			axis = (-1,)
+		if not isinstance(axis, tuple):
+			raise ValueError("Axis given is not a tuple of int or None.")
+
+		# TODO: further sanity checking is necessary.
+		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
+		new_array = self.array_from_shape(new_shape)
+
+		# create starting multi-idx, to iterate over all its possible values
+		multi_idx = tuple([0 for _ in self.shape])
+		for _ in range(self.size):
+			current_value = self.data_list[self._flatten_multi_idx(multi_idx, self.shape)]
+			adapted_multi_idx = [elem for idx, elem in enumerate(multi_idx) if idx not in axis]
+			stored_value = new_array.data_list[
+				self._flatten_multi_idx(adapted_multi_idx, new_shape)
+			]
+
+			new_array.data_list[self._flatten_multi_idx(adapted_multi_idx, new_shape)] = max(
+				stored_value, current_value
+			)
+
+			multi_idx = self._circular_increment_multi_idx(multi_idx, self.shape)
+
+		return new_array
+
+	def min(self, axis: tuple[int] | None = None) -> Array:
+		if axis is None:
+			axis = (-1,)
+		if not isinstance(axis, tuple):
+			raise ValueError("Axis given is not a tuple of int or None.")
+
+		# TODO: further sanity checking is necessary.
+		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
+		new_array = self.array_from_shape(new_shape)
+
+		# create starting multi-idx, to iterate over all its possible values
+		multi_idx = tuple([0 for _ in self.shape])
+		for _ in range(self.size):
+			current_value = self.data_list[self._flatten_multi_idx(multi_idx, self.shape)]
+			adapted_multi_idx = [elem for idx, elem in enumerate(multi_idx) if idx not in axis]
+			stored_value = new_array.data_list[
+				self._flatten_multi_idx(adapted_multi_idx, new_shape)
+			]
+
+			new_array.data_list[self._flatten_multi_idx(adapted_multi_idx, new_shape)] = max(
+				stored_value, current_value
+			)
+
+			multi_idx = self._circular_increment_multi_idx(multi_idx, self.shape)
+
+		return new_array
