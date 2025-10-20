@@ -576,7 +576,7 @@ class Array:
 				self._flatten_multi_idx(adapted_multi_idx, new_shape)
 			]
 
-			new_array.data_list[self._flatten_multi_idx(adapted_multi_idx, new_shape)] = max(
+			new_array.data_list[self._flatten_multi_idx(adapted_multi_idx, new_shape)] = min(
 				stored_value, current_value
 			)
 
