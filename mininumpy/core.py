@@ -23,7 +23,7 @@ def _singular_value_array(shape: tuple[int], value: int | float) -> Array:
 
 	current_value = value
 	for dim in shape[::-1]:
-		if isinstance(current_value, int) or isinstance(current_value, float):
+		if isinstance(current_value, (int, float)):
 			current_list_level = [current_value for _ in range(dim)]
 		else:  # should be list instance. Copies it along new axis.
 			current_list_level = [current_value.copy() for _ in range(dim)]

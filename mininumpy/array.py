@@ -26,7 +26,7 @@ class Array:
 
 	@staticmethod
 	def _is_int_or_float(elem: any) -> bool:
-		return isinstance(elem, int) or isinstance(elem, float)
+		return isinstance(elem, (int, float))
 
 	# TODO: evaluate empty list edge case
 	@classmethod
