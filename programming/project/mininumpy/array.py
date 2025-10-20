@@ -583,3 +583,26 @@ class Array:
 			multi_idx = self._circular_increment_multi_idx(multi_idx, self.shape)
 
 		return new_array
+
+	def argmax(self, axis: int) -> Array:
+		"""Comput the argmax along given axis"""
+		# TODO: further sanity checking is necessary.
+		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
+		new_array = self.array_from_shape(new_shape)
+
+		# create starting multi-idx, to iterate over all its possible values
+		multi_idx = tuple([0 for _ in self.shape])
+		for _ in range(self.size):
+			current_value = self.data_list[self._flatten_multi_idx(multi_idx, self.shape)]
+			adapted_multi_idx = [elem for idx, elem in enumerate(multi_idx) if idx not in axis]
+			stored_value = new_array.data_list[
+				self._flatten_multi_idx(adapted_multi_idx, new_shape)
+			]
+
+			new_array.data_list[self._flatten_multi_idx(adapted_multi_idx, new_shape)] = max(
+				stored_value, current_value
+			)
+
+			multi_idx = self._circular_increment_multi_idx(multi_idx, self.shape)
+
+		return new_array
