@@ -37,3 +37,15 @@ def test_normal_list():
 	single_number_mnp = mnp.array(single_number)
 	single_number_np = np.array(single_number)
 	_check_equality(single_number_mnp, single_number_np)
+
+
+def test_eye():
+	_check_equality(mnp.eye(4), np.eye(4))
+
+
+def test_arange():
+	_check_equality(mnp.arange(3, 7, 2), np.arange(3, 7, 2))
+
+
+def test_linspace():
+	_check_equality(mnp.linspace(2.0, 3.0, num=5), np.linspace(2.0, 3.0, num=5, endpoint=False))

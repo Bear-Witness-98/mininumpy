@@ -13,70 +13,9 @@ class Array:
 	ndim: int
 	size: int
 
-	# TODO: evaluate empty list edge case
-	@classmethod
-	def _get_shape_and_type(
-		cls,
-		test_list: int | float | list[int | float | None],
-	) -> tuple[tuple[int], type[int | float | None]]:
-		"""
-		Get the shape and type of a multi-nested list.
-		If the dimensions do not form an 'n-dimensional square' (if they are not homogeneous in
-		numpy jargon), or if the types do not match, an appropriate exeption will be raised.
-
-		Value error will be raised if non-expected object is inputted to the function.
-		"""
-
-		# If the current object is a list, checks recursively for the
-		# shapes and types of all sublists.
-		#
-		# If these shapes and types are consistent, then the main list's shape is its length
-		# preppended to the shape of any of its sublists (which should be the same).
-		if isinstance(test_list, list):
-			length = len(test_list)
-			if length == 0:
-				return ((0,), None)
-
-			shape_dtype_list = [cls._get_shape_and_type(elem) for elem in test_list]
-			first_shape = shape_dtype_list[0][0]
-			first_dtype = shape_dtype_list[0][1]
-			for shape, dtype in shape_dtype_list[1:]:
-				if shape != first_shape:
-					raise ValueError("Inconsistent shape between sublists")
-				if dtype != first_dtype:
-					raise ValueError("Inconsistent typing between sublists' elements")
-			return (length, *first_shape), first_dtype
-
-		# if it is just a number, return empty tuple and type
-		if isinstance(test_list, (int, float)):
-			return (), type(test_list)
-
-		raise ValueError("Cannot get the shape of non-list, non-number type")
-
-	@classmethod
-	def _flatten_list(cls, lst: list | int | float) -> list:
-		"""
-		Flatten list.
-		"""
-		if isinstance(lst, (int, float)):
-			return [lst]
-
-		flattened_list = []
-		for elem in lst:
-			flattened_list += cls._flatten_list(elem)
-
-		return flattened_list
-
-	@staticmethod
-	def _sanitize_input_list(input_list: any) -> None:
-		if not isinstance(input_list, (int, float, list)):
-			raise ValueError(
-				"Unexpected input for Array class. \n"
-				"Expected array-like list or single float or int value"
-			)
-
-	# TODO: sanitize the input
-	def __init__(self, input_list: list[int | float]):
+	def __init__(
+		self, shape: tuple[int], dtype: type[int | float], data: None | list[int | float] = None
+	):
 		"""
 		Creates Array object from given list,
 
@@ -84,47 +23,23 @@ class Array:
 		dimension. If the input list does not match these conditions, a ValueError will be raised
 		at runtime.
 		"""
-		# sanitize
-		self._sanitize_input_list(input_list)
-
-		# compute shape and
-		self.shape, self.dtype = self._get_shape_and_type(input_list)
-		self.ndim = len(self.shape)  # in case of empty list input, ndim = 1 (same as numpy)
+		# compute shape and related quantities
+		self.shape = shape
+		self.ndim = len(self.shape)
 		self.size = prod(self.shape)
 
-		# actually store data
-		self.data = self._flatten_list(input_list)
+		# store type
+		self.dtype = dtype
+
+		# store data, 0 array if no data is provided
+		self.data = data.copy() if data is not None else [0 for _ in range(self.size)]
 
 	# convenience methods
 	def copy(self) -> Array:
 		"""
 		Make a copy of the current instance.
 		"""
-		new_array = Array([])
-		# populate it with current values
-		new_array.data = self.data.copy()
-		new_array.dtype = self.dtype
-		new_array.shape = tuple(elem for elem in self.shape)
-		new_array.ndim = self.ndim
-		new_array.size = self.size
-
-		return new_array
-
-	@classmethod
-	def array_from_shape(cls, shape: tuple[int]) -> Array:
-		"""
-		Returns zero-filled array of given shape
-		"""
-		new_array = Array([])
-
-		new_array.shape = shape
-		new_array.ndim = len(shape)
-		new_array.size = prod(shape)
-
-		new_array.data = [0 for _ in range(new_array.size)]
-		new_array.dtype = int
-
-		return new_array
+		return Array(self.shape, self.dtype, self.data)
 
 	# TODO: sanitise the input for it to be a tuple of ints
 	def reshape(self, new_shape: tuple[int]) -> Array:
@@ -384,7 +299,7 @@ class Array:
 		"""
 		# get shape of, and create new array
 		new_shape = cls._broadcast_shapes(array1.shape, array2.shape)
-		new_array = cls.array_from_shape(new_shape)
+		new_array = Array(new_shape, resulting_dtype)
 		new_array.dtype = resulting_dtype
 
 		# create starting multi-idx, to iterate over all its possible values
@@ -410,7 +325,9 @@ class Array:
 	def __add__(self, right_operand: Array | int | float) -> Array:
 		self._sanitize_operand(right_operand)
 		right_operand = (
-			Array([right_operand]) if isinstance(right_operand, (int, float)) else right_operand
+			Array((1,), type(right_operand), data=[right_operand])
+			if isinstance(right_operand, (int, float))
+			else right_operand
 		)
 		new_type = float if float in {self.dtype, right_operand.dtype} else int
 		return self._operation_with_broadcasting(self, right_operand, "add", new_type)
@@ -420,7 +337,9 @@ class Array:
 	def __sub__(self, right_operand: Array | int | float) -> Array:
 		self._sanitize_operand(right_operand)
 		right_operand = (
-			Array([right_operand]) if isinstance(right_operand, (int, float)) else right_operand
+			Array((1,), type(right_operand), data=[right_operand])
+			if isinstance(right_operand, (int, float))
+			else right_operand
 		)
 		new_type = float if float in {self.dtype, right_operand.dtype} else int
 		return self._operation_with_broadcasting(self, right_operand, "sub", new_type)
@@ -428,7 +347,9 @@ class Array:
 	def __rsub__(self, left_operand: Array | int | float) -> Array:
 		self._sanitize_operand(left_operand)
 		left_operand = (
-			Array([left_operand]) if isinstance(left_operand, (int, float)) else left_operand
+			Array((1,), type(left_operand), data=[left_operand])
+			if isinstance(left_operand, (int, float))
+			else left_operand
 		)
 		new_type = float if float in {self.dtype, left_operand.dtype} else int
 		return self._operation_with_broadcasting(left_operand, self, "sub", new_type)
@@ -436,7 +357,9 @@ class Array:
 	def __mul__(self, right_operand: Array | int | float) -> Array:
 		self._sanitize_operand(right_operand)
 		right_operand = (
-			Array([right_operand]) if isinstance(right_operand, (int, float)) else right_operand
+			Array((1,), type(right_operand), data=[right_operand])
+			if isinstance(right_operand, (int, float))
+			else right_operand
 		)
 		new_type = float if float in {self.dtype, right_operand.dtype} else int
 		return self._operation_with_broadcasting(self, right_operand, "mul", new_type)
@@ -446,21 +369,27 @@ class Array:
 	def __truediv__(self, right_operand: Array | int | float) -> Array:
 		self._sanitize_operand(right_operand)
 		right_operand = (
-			Array([right_operand]) if isinstance(right_operand, (int, float)) else right_operand
+			Array((1,), type(right_operand), data=[right_operand])
+			if isinstance(right_operand, (int, float))
+			else right_operand
 		)
 		return self._operation_with_broadcasting(self, right_operand, "truediv", float)
 
 	def __rtruediv__(self, left_operand: Array | int | float) -> Array:
 		self._sanitize_operand(left_operand)
 		left_operand = (
-			Array([left_operand]) if isinstance(left_operand, (int, float)) else left_operand
+			Array((1,), type(left_operand), data=[left_operand])
+			if isinstance(left_operand, (int, float))
+			else left_operand
 		)
 		return self._operation_with_broadcasting(left_operand, self, "truediv", float)
 
 	def __pow__(self, right_operand: Array | int | float) -> Array:
 		self._sanitize_operand(right_operand)
 		right_operand = (
-			Array([right_operand]) if isinstance(right_operand, (int, float)) else right_operand
+			Array((1,), type(right_operand), data=[right_operand])
+			if isinstance(right_operand, (int, float))
+			else right_operand
 		)
 		new_type = float if float in {self.dtype, right_operand.dtype} else int
 		return self._operation_with_broadcasting(self, right_operand, "pow", new_type)
@@ -468,7 +397,9 @@ class Array:
 	def __rpow__(self, left_operand: Array | int | float) -> Array:
 		self._sanitize_operand(left_operand)
 		left_operand = (
-			Array([left_operand]) if isinstance(left_operand, (int, float)) else left_operand
+			Array((1,), type(left_operand), data=[left_operand])
+			if isinstance(left_operand, (int, float))
+			else left_operand
 		)
 		new_type = float if float in {self.dtype, left_operand.dtype} else int
 		return self._operation_with_broadcasting(left_operand, self, "pow", new_type)
@@ -482,7 +413,7 @@ class Array:
 
 		# TODO: further sanity checking is necessary.
 		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
-		new_array = self.array_from_shape(new_shape)
+		new_array = Array(new_shape, float)
 
 		# create starting multi-idx, to iterate over all its possible values
 		multi_idx = tuple([0 for _ in self.shape])
@@ -507,7 +438,7 @@ class Array:
 
 		# TODO: further sanity checking is necessary.
 		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
-		new_array = self.array_from_shape(new_shape)
+		new_array = Array(new_shape, float)
 
 		# create starting multi-idx, to iterate over all its possible values
 		multi_idx = tuple([0 for _ in self.shape])
@@ -532,7 +463,7 @@ class Array:
 
 		# TODO: further sanity checking is necessary.
 		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
-		new_array = self.array_from_shape(new_shape)
+		new_array = Array(new_shape, float)
 
 		# create starting multi-idx, to iterate over all its possible values
 		multi_idx = tuple([0 for _ in self.shape])
@@ -561,7 +492,7 @@ class Array:
 
 		# TODO: further sanity checking is necessary.
 		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
-		new_array = self.array_from_shape(new_shape)
+		new_array = Array(new_shape, float)
 
 		# create starting multi-idx, to iterate over all its possible values
 		multi_idx = tuple([0 for _ in self.shape])
@@ -586,7 +517,7 @@ class Array:
 
 		# TODO: further sanity checking is necessary.
 		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
-		new_array = self.array_from_shape(new_shape)
+		new_array = Array(new_shape, float)
 
 		# create starting multi-idx, to iterate over all its possible values
 		multi_idx = tuple([0 for _ in self.shape])
@@ -604,10 +535,10 @@ class Array:
 		return new_array
 
 	def argmax(self, axis: int) -> Array:
-		"""Comput the argmax along given axis"""
-		# TODO: further sanity checking is necessary.
+		"""Compute the argmax along given axis"""
+		# TODO: further sanity checking might be necessary.
 		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
-		new_array = self.array_from_shape(new_shape)
+		new_array = Array(new_shape, float)
 
 		# create starting multi-idx, to iterate over all its possible values
 		multi_idx = tuple([0 for _ in self.shape])

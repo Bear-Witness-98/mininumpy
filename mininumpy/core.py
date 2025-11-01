@@ -1,56 +1,129 @@
+from math import prod
+
 from .array import Array
 
 """
-Would be nice to put all this under a unique class. Check later how to do so.
+Main methods for creating MiniNumPy arrays.
 """
-# class MiniNumPy:
-# 	"""
-# 	Namespace for all MiniNumPy constructor methods
-# 	"""
+
+
+def _sanitize_input_list(input_list: any) -> None:
+	if not isinstance(input_list, (int, float, list)):
+		raise ValueError(
+			"Unexpected input for Array class. \n"
+			"Expected array-like list or single float or int value"
+		)
+
+
+def _sanitize_input_tuple(input_tuple: any) -> None:
+	if not isinstance(input_tuple, tuple):
+		raise ValueError(
+			"Unexpected input for builder function. \n"
+			f"Expected tuple of ints, found {type(input_tuple)}"
+		)
+	for elem in input_tuple:
+		if not isinstance(elem, int):
+			raise ValueError(
+				"Unexpected input for builder function. \n"
+				f"Expected tuple of ints, found {type(elem)}-type in tuple"
+			)
+
+
+def _get_shape_and_type(
+	test_list: int | float | list[int | float | None],
+) -> tuple[tuple[int], type[int | float | None]]:
+	"""
+	Get the shape and type of a multi-nested list.
+	If the dimensions do not form an 'n-dimensional square' (if they are not homogeneous in
+	numpy jargon), or if the types do not match, an appropriate exeption will be raised.
+
+	Value error will be raised if non-expected object is inputted to the function.
+	"""
+
+	# If the current object is a list, checks recursively for the
+	# shapes and types of all sublists.
+	#
+	# If these shapes and types are consistent, then the main list's shape is its length
+	# preppended to the shape of any of its sublists (which should be the same).
+	if isinstance(test_list, list):
+		length = len(test_list)
+		if length == 0:
+			return ((0,), None)
+
+		shape_dtype_list = [_get_shape_and_type(elem) for elem in test_list]
+		first_shape = shape_dtype_list[0][0]
+		first_dtype = shape_dtype_list[0][1]
+		for shape, dtype in shape_dtype_list[1:]:
+			if shape != first_shape:
+				raise ValueError("Inconsistent shape between sublists")
+			if dtype != first_dtype:
+				raise ValueError("Inconsistent typing between sublists' elements")
+		return (length, *first_shape), first_dtype
+
+	# if it is just a number, return empty tuple and type
+	if isinstance(test_list, (int, float)):
+		return (), type(test_list)
+
+	raise ValueError("Cannot get the shape of non-list, non-number type")
+
+
+def _flatten_list(lst: list | int | float) -> list:
+	"""
+	Flattens multi-nested list of int or floats.
+	"""
+	if isinstance(lst, (int, float)):
+		return [lst]
+
+	flattened_list = []
+	for elem in lst:
+		flattened_list += _flatten_list(elem)
+
+	return flattened_list
 
 
 def array(list_or_nested_list: list) -> Array:
 	"""Creates array from a given list"""
-	# Sanitize array
-	return Array(list_or_nested_list)
+	# Sanitize input
+	_sanitize_input_list(list_or_nested_list)
+
+	lst_shape, lst_dtype = _get_shape_and_type(list_or_nested_list)
+	lst_flattend = _flatten_list(list_or_nested_list)
+
+	return Array(lst_shape, lst_dtype, data=lst_flattend)
 
 
 def _singular_value_array(shape: tuple[int], value: int | float) -> Array:
 	"""Builds an array of the specified shape, with given value."""
-	size = 1
-	for dim_length in shape:
-		size *= dim_length
 
-	current_value = value
-	for dim in shape[::-1]:
-		if isinstance(current_value, (int, float)):
-			current_list_level = [current_value for _ in range(dim)]
-		else:  # should be list instance. Copies it along new axis.
-			current_list_level = [current_value.copy() for _ in range(dim)]
-		current_value = current_list_level
+	# computes needed values to init a new array
+	dtype = type(value)
 
-	return array(current_list_level)
+	size = prod(shape)
+	data = [value for _ in range(size)]
+
+	return Array(shape, dtype, data)
 
 
 def zeros(shape: tuple[int]) -> Array:
 	"""Returns an array of zeros of the specified shape."""
+	_sanitize_input_tuple(shape)
 	return _singular_value_array(shape, 0)
 
 
 def ones(shape: tuple[int]) -> Array:
 	"""Returns an array of ones of the specified shape."""
+	_sanitize_input_tuple(shape)
 	return _singular_value_array(shape, 1)
 
 
 def eye(n: int) -> Array:
 	"""Returns a square array of shape (n,n) with ones in its diagonal."""
-	# creates 2-dimensional list with proper shape and values
-	lst = [
-		[1 if idx_2 == idx else 0 for idx_2, __ in enumerate(range(n))]
-		for idx, _ in enumerate(range(n))
-	]
-	# converts to array and returns
-	return array(lst)
+	if not isinstance(n, int):
+		raise ValueError(f"Expected int, but {type(n)} was given")
+
+	# creates linear array of 1 values in the positions to be moved to the diagonal
+	lst = [1 if outer - inner % n == 0 else 0 for outer in range(n) for inner in range(n)]
+	return Array((n, n), int, lst)
 
 
 def _check_range(start: float, stop: float) -> None:
