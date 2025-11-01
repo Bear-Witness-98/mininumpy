@@ -87,6 +87,7 @@ class Array:
 		# sanitize
 		self._sanitize_input_list(input_list)
 
+		# compute shape and
 		self.shape, self.dtype = self._get_shape_and_type(input_list)
 		self.ndim = len(self.shape)  # in case of empty list input, ndim = 1 (same as numpy)
 		self.size = prod(self.shape)
@@ -400,39 +401,77 @@ class Array:
 
 		return new_array
 
+	@staticmethod
+	def _sanitize_operand(operand: any) -> None:
+		if not isinstance(operand, (int, float, Array)):
+			raise ValueError(f"Unsopported operation for types {Array} and {type(operand)}")
+		pass
+
 	def __add__(self, right_operand: Array | int | float) -> Array:
+		self._sanitize_operand(right_operand)
 		right_operand = (
 			Array([right_operand]) if isinstance(right_operand, (int, float)) else right_operand
 		)
 		new_type = float if float in {self.dtype, right_operand.dtype} else int
 		return self._operation_with_broadcasting(self, right_operand, "add", new_type)
 
+	__radd__ = __add__
+
 	def __sub__(self, right_operand: Array | int | float) -> Array:
+		self._sanitize_operand(right_operand)
 		right_operand = (
 			Array([right_operand]) if isinstance(right_operand, (int, float)) else right_operand
 		)
 		new_type = float if float in {self.dtype, right_operand.dtype} else int
 		return self._operation_with_broadcasting(self, right_operand, "sub", new_type)
 
+	def __rsub__(self, left_operand: Array | int | float) -> Array:
+		self._sanitize_operand(left_operand)
+		left_operand = (
+			Array([left_operand]) if isinstance(left_operand, (int, float)) else left_operand
+		)
+		new_type = float if float in {self.dtype, left_operand.dtype} else int
+		return self._operation_with_broadcasting(left_operand, self, "sub", new_type)
+
 	def __mul__(self, right_operand: Array | int | float) -> Array:
+		self._sanitize_operand(right_operand)
 		right_operand = (
 			Array([right_operand]) if isinstance(right_operand, (int, float)) else right_operand
 		)
 		new_type = float if float in {self.dtype, right_operand.dtype} else int
 		return self._operation_with_broadcasting(self, right_operand, "mul", new_type)
 
+	__rmul__ = __mul__
+
 	def __truediv__(self, right_operand: Array | int | float) -> Array:
+		self._sanitize_operand(right_operand)
 		right_operand = (
 			Array([right_operand]) if isinstance(right_operand, (int, float)) else right_operand
 		)
 		return self._operation_with_broadcasting(self, right_operand, "truediv", float)
 
+	def __rtruediv__(self, left_operand: Array | int | float) -> Array:
+		self._sanitize_operand(left_operand)
+		left_operand = (
+			Array([left_operand]) if isinstance(left_operand, (int, float)) else left_operand
+		)
+		return self._operation_with_broadcasting(left_operand, self, "truediv", float)
+
 	def __pow__(self, right_operand: Array | int | float) -> Array:
+		self._sanitize_operand(right_operand)
 		right_operand = (
 			Array([right_operand]) if isinstance(right_operand, (int, float)) else right_operand
 		)
 		new_type = float if float in {self.dtype, right_operand.dtype} else int
 		return self._operation_with_broadcasting(self, right_operand, "pow", new_type)
+
+	def __rpow__(self, left_operand: Array | int | float) -> Array:
+		self._sanitize_operand(left_operand)
+		left_operand = (
+			Array([left_operand]) if isinstance(left_operand, (int, float)) else left_operand
+		)
+		new_type = float if float in {self.dtype, left_operand.dtype} else int
+		return self._operation_with_broadcasting(left_operand, self, "pow", new_type)
 
 	# Aggregation methods
 	def _general_aggregate(self, axis: tuple[int] | None = None) -> Array:
