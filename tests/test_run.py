@@ -12,7 +12,7 @@ single_number = 7
 
 
 def _check_equality(mnp_array: Array, np_array: ndarray) -> None:
-	pass
+	assert mnp_array.data == np_array.flatten().tolist()
 
 
 def test_3d_list():
