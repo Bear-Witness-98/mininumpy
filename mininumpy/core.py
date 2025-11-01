@@ -1,32 +1,12 @@
 from math import prod
 
+from utils import assert_int_tuple, assert_list_int_float
+
 from .array import Array
 
 """
 Main methods for creating MiniNumPy arrays.
 """
-
-
-def _sanitize_input_list(input_list: any) -> None:
-	if not isinstance(input_list, (int, float, list)):
-		raise ValueError(
-			"Unexpected input for Array class. \n"
-			"Expected array-like list or single float or int value"
-		)
-
-
-def _sanitize_input_tuple(input_tuple: any) -> None:
-	if not isinstance(input_tuple, tuple):
-		raise ValueError(
-			"Unexpected input for builder function. \n"
-			f"Expected tuple of ints, found {type(input_tuple)}"
-		)
-	for elem in input_tuple:
-		if not isinstance(elem, int):
-			raise ValueError(
-				"Unexpected input for builder function. \n"
-				f"Expected tuple of ints, found {type(elem)}-type in tuple"
-			)
 
 
 def _get_shape_and_type(
@@ -84,7 +64,7 @@ def _flatten_list(lst: list | int | float) -> list:
 def array(list_or_nested_list: list) -> Array:
 	"""Creates array from a given list"""
 	# Sanitize input
-	_sanitize_input_list(list_or_nested_list)
+	assert_list_int_float(list_or_nested_list)
 
 	lst_shape, lst_dtype = _get_shape_and_type(list_or_nested_list)
 	lst_flattend = _flatten_list(list_or_nested_list)
@@ -106,13 +86,13 @@ def _singular_value_array(shape: tuple[int], value: int | float) -> Array:
 
 def zeros(shape: tuple[int]) -> Array:
 	"""Returns an array of zeros of the specified shape."""
-	_sanitize_input_tuple(shape)
+	assert_int_tuple(shape)
 	return _singular_value_array(shape, 0)
 
 
 def ones(shape: tuple[int]) -> Array:
 	"""Returns an array of ones of the specified shape."""
-	_sanitize_input_tuple(shape)
+	assert_int_tuple(shape)
 	return _singular_value_array(shape, 1)
 
 
