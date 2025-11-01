@@ -1,0 +1,625 @@
+# File with the implementation of the array type.
+from __future__ import annotations  # for typehinting the Array class within itself
+
+from math import exp, log, prod, sqrt
+
+
+class Array:
+	"""Array to implement lite version of NumPy."""
+
+	data: list  # memoryview
+	dtype: type[int] | type[float] | type[None]
+	shape: tuple[int]
+	ndim: int
+	size: int
+
+	# TODO: evaluate empty list edge case
+	@classmethod
+	def _get_shape_and_type(
+		cls,
+		test_list: int | float | list[int | float | None],
+	) -> tuple[tuple[int], type[int | float | None]]:
+		"""
+		Get the shape and type of a multi-nested list.
+		If the dimensions do not form an 'n-dimensional square' (if they are not homogeneous in
+		numpy jargon), or if the types do not match, an appropriate exeption will be raised.
+
+		Value error will be raised if non-expected object is inputted to the function.
+		"""
+
+		# If the current object is a list, checks recursively for the
+		# shapes and types of all sublists.
+		#
+		# If these shapes and types are consistent, then the main list's shape is its length
+		# preppended to the shape of any of its sublists (which should be the same).
+		if isinstance(test_list, list):
+			length = len(test_list)
+			if length == 0:
+				return ((0,), None)
+
+			shape_dtype_list = [cls._get_shape_and_type(elem) for elem in test_list]
+			first_shape = shape_dtype_list[0][0]
+			first_dtype = shape_dtype_list[0][1]
+			for shape, dtype in shape_dtype_list[1:]:
+				if shape != first_shape:
+					raise ValueError("Inconsistent shape between sublists")
+				if dtype != first_dtype:
+					raise ValueError("Inconsistent typing between sublists' elements")
+			return (length, *first_shape), first_dtype
+
+		# if it is just a number, return empty tuple and type
+		if isinstance(test_list, (int, float)):
+			return (), type(test_list)
+
+		raise ValueError("Cannot get the shape of non-list, non-number type")
+
+	@classmethod
+	def _flatten_list(cls, lst: list | int | float) -> list:
+		"""
+		Flatten list.
+		"""
+		if isinstance(lst, (int, float)):
+			return [lst]
+
+		flattened_list = []
+		for elem in lst:
+			flattened_list += cls._flatten_list(elem)
+
+		return flattened_list
+
+	@staticmethod
+	def _sanitize_input_list(input_list: any) -> None:
+		if not isinstance(input_list, (int, float, list)):
+			raise ValueError(
+				"Unexpected input for Array class. \n"
+				"Expected array-like list or single float or int value"
+			)
+
+	# TODO: sanitize the input
+	def __init__(self, input_list: list[int | float]):
+		"""
+		Creates Array object from given list,
+
+		This class only accepts same type (int or float) multi-nested arrays of homegenous
+		dimension. If the input list does not match these conditions, a ValueError will be raised
+		at runtime.
+		"""
+		# sanitize
+		self._sanitize_input_list(input_list)
+
+		# compute shape and
+		self.shape, self.dtype = self._get_shape_and_type(input_list)
+		self.ndim = len(self.shape)  # in case of empty list input, ndim = 1 (same as numpy)
+		self.size = prod(self.shape)
+
+		# actually store data
+		self.data = self._flatten_list(input_list)
+
+	# convenience methods
+	def copy(self) -> Array:
+		"""
+		Make a copy of the current instance.
+		"""
+		new_array = Array([])
+		# populate it with current values
+		new_array.data = self.data.copy()
+		new_array.dtype = self.dtype
+		new_array.shape = tuple(elem for elem in self.shape)
+		new_array.ndim = self.ndim
+		new_array.size = self.size
+
+		return new_array
+
+	@classmethod
+	def array_from_shape(cls, shape: tuple[int]) -> Array:
+		"""
+		Returns zero-filled array of given shape
+		"""
+		new_array = Array([])
+
+		new_array.shape = shape
+		new_array.ndim = len(shape)
+		new_array.size = prod(shape)
+
+		new_array.data = [0 for _ in range(new_array.size)]
+		new_array.dtype = int
+
+		return new_array
+
+	# TODO: sanitise the input for it to be a tuple of ints
+	def reshape(self, new_shape: tuple[int]) -> Array:
+		"""
+		Reshapes array to given new_shape.
+
+		If the size of new_shape does not match self.size, a RuntimeError will be rised.
+		"""
+		if prod(new_shape) != self.size:
+			raise RuntimeError("Size of input shape does not correspond to size of current array")
+		new_array = self.copy()
+		new_array.shape = new_shape
+
+		return new_array
+
+	@classmethod
+	def _flatten_multi_idx(cls, idx: tuple[int], shape: tuple[int]) -> int:
+		"""
+		Converts an multidimensional index into a linear one for internal data representation.
+		It uses the shape to compute the appropriate strides.
+
+		If (d_0, ..., d_(k-1)) is the shape of the array, then a multidimensional index is a tuple
+		I = (i_0, ..., i_(k-1)) with i_j in the range (0, ..., d_j).
+
+		The corresponding linear index for I is:
+		lin_idx_(k+1) = i_k + d_k( i_(k-1) + d_(k-1)( ... i_1 + d_1(i_0) ...))
+
+		This linearized index for a k-dimensional array can be computed recursively by the
+		recursive sequence:
+		lin_idx_0 = i_0
+		lin_idx_n = i_n + d_n*lin_idx_(n_1)
+
+		Notice that for these computations
+		"""
+		# TODO: should do a sanity check here
+		if len(idx) == 1:
+			return idx[-1]
+		return idx[-1] + (shape[-1] * cls._flatten_multi_idx(idx[:-1], shape[:-1]))
+
+	@classmethod
+	def _circular_increment_multi_idx(cls, idx: tuple[int], shape: tuple[int]) -> tuple[int]:
+		"""
+		Increment the multidimensional idx of an array by 1, given its shape.
+
+		This operation is defined so that it adds one to the last idx position, and in case
+		of overflow, it carries a +1 to the previous idx position.
+
+		It is implemented in a circular manner for simplification purposes.
+		"""
+		if len(idx) == 0:
+			return ()
+
+		if idx[-1] < (shape[-1] - 1):
+			return *idx[:-1], (idx[-1] + 1)
+
+		return *cls._circular_increment_multi_idx(idx[:-1], shape[:-1]), 0
+
+	def transpose(self, permutation: tuple[int] | None = None) -> Array:
+		# sanity check the input
+		if permutation is None:
+			permutation = tuple(reversed(range(self.ndim)))
+		if not isinstance(permutation, tuple):
+			raise ValueError("Non tuple, non-None value given as permutation")
+		if set(permutation) != set(range(len(permutation))):
+			raise RuntimeError("Invalid permutation for transposition.")
+
+		# get new shape and empty new data. Same behaviour as numpy.
+		new_shape = tuple(self.shape[p] for p in permutation)
+		new_data = [0 for _ in range(len(self.data))]
+
+		idx = tuple(0 for _ in range(self.ndim))
+		for _ in range(self.size):
+			# get index in list for value
+			linear_idx = self._flatten_multi_idx(idx, self.shape)
+
+			# compute corresponding idx in new array, and its linearization
+			new_idx = tuple(idx[p] for p in permutation)
+			new_linear_idx = self._flatten_multi_idx(new_idx, new_shape)
+
+			# copy corresponding values and increment idx
+			new_data[new_linear_idx] = self.data[linear_idx]
+			idx = self._circular_increment_multi_idx(idx, self.shape)
+
+		# Create new_array and return it with new shape and list
+		new_array = self.copy()
+		new_array.shape = new_shape
+		new_array.data = new_data
+
+		return new_array
+
+	@classmethod
+	def _unflatten_list(
+		cls,
+		flattened_list: list[int | float | None],
+		shape: tuple[int],
+	) -> list:
+		"""
+		Unflattens given list given specific shape.
+		"""
+		# sanity assertion
+		if prod(shape) != len(flattened_list):
+			raise ValueError("Given list size does not match size obtained from given shape.")
+
+		# empty list and dtype list cases
+		if flattened_list == []:
+			return flattened_list
+		if (len(shape) == 0) or (len(shape) == 1):
+			return flattened_list
+
+		# recursive call
+		unflattend_list = []
+		sublength = prod(shape[1:])
+		for idx in range(shape[0]):
+			unflattend_list.append(
+				cls._unflatten_list(
+					flattened_list[idx * sublength : (idx + 1) * sublength], shape[1:]
+				)
+			)
+
+		return unflattend_list
+
+	# for pretty printing purposes
+	def __str__(self) -> str:
+		return self._unflatten_list(self.data, self.shape).__str__()
+
+	__repr__ = __str__
+
+	# elementwise operations
+	def exp(self) -> Array:
+		"""
+		Return a copy of the array with elements e^(elem).
+		"""
+		new_array = self.copy()
+		new_array.data = [exp(elem) for elem in new_array.data]
+		new_array.dtype = float
+		return new_array
+
+	def log(self) -> Array:
+		"""
+		Return a copy of the array with elements log_e(elem).
+		"""
+		new_array = self.copy()
+		new_array.data = [log(elem) for elem in new_array.data]
+		new_array.dtype = float
+		return new_array
+
+	def sqrt(self) -> Array:
+		"""
+		Return a copy of the array with elements sqrt(elem).
+		"""
+		new_array = self.copy()
+		new_array.data = [sqrt(elem) for elem in new_array.data]
+		new_array.dtype = float
+		return new_array
+
+	def abs(self) -> Array:
+		"""
+		Return a copy of the array with elements abs(elem).
+		"""
+		new_array = self.copy()
+		new_array.data = [abs(elem) for elem in new_array.data]
+		return new_array
+
+	# binary operations
+	@staticmethod
+	def _broadcast_shapes(shape1: tuple[int], shape2: tuple[int]) -> tuple[int]:
+		"""
+		Returns the shape into which both input shapes could be broadcasted.
+		Raises ValueError if the shapes cannot be broadcasted together.
+
+		The condition is that, starting from the rightmost dimension either:
+		1) the dimensions must match
+		2) one of the dimensions is 1
+
+		One can extend a shape with trailing ones up to the length of the
+		shape with more dimensions.
+		"""
+		# get shorter and longer arrays
+		shorter_array, longer_array = (
+			(shape1, shape2) if (len(shape1) < len(shape2)) else (shape2, shape1)
+		)
+		min_length = len(shorter_array)
+		max_length = len(longer_array)
+
+		# check if dimensions match (or either is 1), starting from the rightmost one.
+		broadcasted_shape = ()
+		for idx in range(min_length):
+			dim = -1 - idx
+			is_dim_compatible = (
+				(shape1[dim] == shape2[dim]) or (shape1[dim] == 1) or (shape2[dim] == 1)
+			)
+			if not is_dim_compatible:
+				raise ValueError(
+					f"Arrays of shape {shape1} and {shape2} cannot be broadcasted together."
+				)
+			broadcasted_shape = (max(shape1[dim], shape2[dim]),) + broadcasted_shape
+
+		# copy the remaining dims of the longer array
+		remaining_dims = longer_array[0 : max_length - min_length]
+		broadcasted_shape = remaining_dims + broadcasted_shape
+		return broadcasted_shape
+
+	@staticmethod
+	def _fit_broadcasted_multi_idx_to_shape(
+		multi_idx: tuple[int],
+		shape: tuple[int],
+	) -> tuple[int]:
+		"""
+		Makes multi-index corresponding to a some broadcasted array fit into the shape of one of its
+		base arrays.
+
+		This method MUST only be used for the corresponding broadcasted arrays, as it is optimized
+		in such a way that operations can be done, without actually copying information for the
+		broadcast.
+		"""
+		starting_dim = len(multi_idx) - len(shape)
+		new_mulit_idx = list(multi_idx[starting_dim:])
+		for idx, (dim, dim_value) in enumerate(zip(shape, new_mulit_idx)):
+			if dim_value > (dim - 1):
+				new_mulit_idx[idx] = 0
+		return tuple(new_mulit_idx)
+
+	@classmethod
+	def _evaluate_array_in_broadcasted_multi_idx(
+		cls,
+		array: Array,
+		multi_idx: tuple[int],
+	) -> int | float | None:
+		array_multi_idx = cls._fit_broadcasted_multi_idx_to_shape(multi_idx, array.shape)
+		array_idx = cls._flatten_multi_idx(array_multi_idx, array.shape)
+		return array.data[array_idx]
+
+	_binary_operations = {
+		"add": lambda x, y: x + y,
+		"sub": lambda x, y: x - y,
+		"mul": lambda x, y: x * y,
+		"truediv": lambda x, y: x / y,
+		"pow": lambda x, y: x**y,
+		"max": lambda x, y: max(x, y),
+		"min": lambda x, y: min(x, y),
+		"argmin": lambda x, y: 0 if x <= y else 1,
+		"argmax": lambda x, y: 1 if x <= y else 0,
+	}
+
+	@classmethod
+	def _operation_with_broadcasting(
+		cls,
+		array1: Array,
+		array2: Array,
+		op: str,
+		resulting_dtype: type[int] | type[float] | type[None],
+	) -> None:
+		"""
+		Performs a dummy binary operation between array1 and array2.
+
+		New dtype expected must be given.
+		"""
+		# get shape of, and create new array
+		new_shape = cls._broadcast_shapes(array1.shape, array2.shape)
+		new_array = cls.array_from_shape(new_shape)
+		new_array.dtype = resulting_dtype
+
+		# create starting multi-idx, to iterate over all its possible values
+		multi_idx = tuple([0 for _ in new_shape])
+		for _ in range(new_array.size):
+			# get value for first array
+			operand_left = cls._evaluate_array_in_broadcasted_multi_idx(array1, multi_idx)
+			operand_right = cls._evaluate_array_in_broadcasted_multi_idx(array2, multi_idx)
+			# update value on new array
+			new_array_idx = cls._flatten_multi_idx(multi_idx, new_array.shape)
+			new_array.data[new_array_idx] = cls._binary_operations[op](operand_left, operand_right)
+			# increase the general idx
+			multi_idx = cls._circular_increment_multi_idx(multi_idx, new_array.shape)
+
+		return new_array
+
+	@staticmethod
+	def _sanitize_operand(operand: any) -> None:
+		if not isinstance(operand, (int, float, Array)):
+			raise ValueError(f"Unsopported operation for types {Array} and {type(operand)}")
+		pass
+
+	def __add__(self, right_operand: Array | int | float) -> Array:
+		self._sanitize_operand(right_operand)
+		right_operand = (
+			Array([right_operand]) if isinstance(right_operand, (int, float)) else right_operand
+		)
+		new_type = float if float in {self.dtype, right_operand.dtype} else int
+		return self._operation_with_broadcasting(self, right_operand, "add", new_type)
+
+	__radd__ = __add__
+
+	def __sub__(self, right_operand: Array | int | float) -> Array:
+		self._sanitize_operand(right_operand)
+		right_operand = (
+			Array([right_operand]) if isinstance(right_operand, (int, float)) else right_operand
+		)
+		new_type = float if float in {self.dtype, right_operand.dtype} else int
+		return self._operation_with_broadcasting(self, right_operand, "sub", new_type)
+
+	def __rsub__(self, left_operand: Array | int | float) -> Array:
+		self._sanitize_operand(left_operand)
+		left_operand = (
+			Array([left_operand]) if isinstance(left_operand, (int, float)) else left_operand
+		)
+		new_type = float if float in {self.dtype, left_operand.dtype} else int
+		return self._operation_with_broadcasting(left_operand, self, "sub", new_type)
+
+	def __mul__(self, right_operand: Array | int | float) -> Array:
+		self._sanitize_operand(right_operand)
+		right_operand = (
+			Array([right_operand]) if isinstance(right_operand, (int, float)) else right_operand
+		)
+		new_type = float if float in {self.dtype, right_operand.dtype} else int
+		return self._operation_with_broadcasting(self, right_operand, "mul", new_type)
+
+	__rmul__ = __mul__
+
+	def __truediv__(self, right_operand: Array | int | float) -> Array:
+		self._sanitize_operand(right_operand)
+		right_operand = (
+			Array([right_operand]) if isinstance(right_operand, (int, float)) else right_operand
+		)
+		return self._operation_with_broadcasting(self, right_operand, "truediv", float)
+
+	def __rtruediv__(self, left_operand: Array | int | float) -> Array:
+		self._sanitize_operand(left_operand)
+		left_operand = (
+			Array([left_operand]) if isinstance(left_operand, (int, float)) else left_operand
+		)
+		return self._operation_with_broadcasting(left_operand, self, "truediv", float)
+
+	def __pow__(self, right_operand: Array | int | float) -> Array:
+		self._sanitize_operand(right_operand)
+		right_operand = (
+			Array([right_operand]) if isinstance(right_operand, (int, float)) else right_operand
+		)
+		new_type = float if float in {self.dtype, right_operand.dtype} else int
+		return self._operation_with_broadcasting(self, right_operand, "pow", new_type)
+
+	def __rpow__(self, left_operand: Array | int | float) -> Array:
+		self._sanitize_operand(left_operand)
+		left_operand = (
+			Array([left_operand]) if isinstance(left_operand, (int, float)) else left_operand
+		)
+		new_type = float if float in {self.dtype, left_operand.dtype} else int
+		return self._operation_with_broadcasting(left_operand, self, "pow", new_type)
+
+	# Aggregation methods
+	def _general_aggregate(self, axis: tuple[int] | None = None) -> Array:
+		if axis is None:
+			axis = (-1,)
+		if not isinstance(axis, tuple):
+			raise ValueError("Axis given is not a tuple of int or None.")
+
+		# TODO: further sanity checking is necessary.
+		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
+		new_array = self.array_from_shape(new_shape)
+
+		# create starting multi-idx, to iterate over all its possible values
+		multi_idx = tuple([0 for _ in self.shape])
+		for _ in range(self.size):
+			current_value = self.data[self._flatten_multi_idx(multi_idx, self.shape)]
+			adapted_multi_idx = [elem for idx, elem in enumerate(multi_idx) if idx not in axis]
+			stored_value = new_array.data[self._flatten_multi_idx(adapted_multi_idx, new_shape)]
+
+			new_array.data[self._flatten_multi_idx(adapted_multi_idx, new_shape)] = (
+				stored_value + current_value
+			)
+
+			multi_idx = self._circular_increment_multi_idx(multi_idx, self.shape)
+
+		return new_array
+
+	def sum(self, axis: tuple[int] | None = None) -> Array:
+		if axis is None:
+			axis = (-1,)
+		if not isinstance(axis, tuple):
+			raise ValueError("Axis given is not a tuple of int or None.")
+
+		# TODO: further sanity checking is necessary.
+		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
+		new_array = self.array_from_shape(new_shape)
+
+		# create starting multi-idx, to iterate over all its possible values
+		multi_idx = tuple([0 for _ in self.shape])
+		for _ in range(self.size):
+			current_value = self.data[self._flatten_multi_idx(multi_idx, self.shape)]
+			adapted_multi_idx = [elem for idx, elem in enumerate(multi_idx) if idx not in axis]
+			stored_value = new_array.data[self._flatten_multi_idx(adapted_multi_idx, new_shape)]
+
+			new_array.data[self._flatten_multi_idx(adapted_multi_idx, new_shape)] = (
+				stored_value + current_value
+			)
+
+			multi_idx = self._circular_increment_multi_idx(multi_idx, self.shape)
+
+		return new_array
+
+	def mean(self, axis: tuple[int] | None = None) -> Array:
+		if axis is None:
+			axis = (-1,)
+		if not isinstance(axis, tuple):
+			raise ValueError("Axis given is not a tuple of int or None.")
+
+		# TODO: further sanity checking is necessary.
+		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
+		new_array = self.array_from_shape(new_shape)
+
+		# create starting multi-idx, to iterate over all its possible values
+		multi_idx = tuple([0 for _ in self.shape])
+		for _ in range(self.size):
+			current_value = self.data[self._flatten_multi_idx(multi_idx, self.shape)]
+			adapted_multi_idx = [elem for idx, elem in enumerate(multi_idx) if idx not in axis]
+			stored_value = new_array.data[self._flatten_multi_idx(adapted_multi_idx, new_shape)]
+
+			new_array.data[self._flatten_multi_idx(adapted_multi_idx, new_shape)] = (
+				stored_value + current_value
+			)
+
+			multi_idx = self._circular_increment_multi_idx(multi_idx, self.shape)
+
+		denominator = prod([elem for idx, elem in enumerate(self.shape) if idx in axis])
+
+		new_array.data = [elem / denominator for elem in new_array.data]
+
+		return new_array
+
+	def max(self, axis: tuple[int] | None = None) -> Array:
+		if axis is None:
+			axis = (-1,)
+		if not isinstance(axis, tuple):
+			raise ValueError("Axis given is not a tuple of int or None.")
+
+		# TODO: further sanity checking is necessary.
+		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
+		new_array = self.array_from_shape(new_shape)
+
+		# create starting multi-idx, to iterate over all its possible values
+		multi_idx = tuple([0 for _ in self.shape])
+		for _ in range(self.size):
+			current_value = self.data[self._flatten_multi_idx(multi_idx, self.shape)]
+			adapted_multi_idx = [elem for idx, elem in enumerate(multi_idx) if idx not in axis]
+			stored_value = new_array.data[self._flatten_multi_idx(adapted_multi_idx, new_shape)]
+
+			new_array.data[self._flatten_multi_idx(adapted_multi_idx, new_shape)] = max(
+				stored_value, current_value
+			)
+
+			multi_idx = self._circular_increment_multi_idx(multi_idx, self.shape)
+
+		return new_array
+
+	def min(self, axis: tuple[int] | None = None) -> Array:
+		if axis is None:
+			axis = (-1,)
+		if not isinstance(axis, tuple):
+			raise ValueError("Axis given is not a tuple of int or None.")
+
+		# TODO: further sanity checking is necessary.
+		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
+		new_array = self.array_from_shape(new_shape)
+
+		# create starting multi-idx, to iterate over all its possible values
+		multi_idx = tuple([0 for _ in self.shape])
+		for _ in range(self.size):
+			current_value = self.data[self._flatten_multi_idx(multi_idx, self.shape)]
+			adapted_multi_idx = [elem for idx, elem in enumerate(multi_idx) if idx not in axis]
+			stored_value = new_array.data[self._flatten_multi_idx(adapted_multi_idx, new_shape)]
+
+			new_array.data[self._flatten_multi_idx(adapted_multi_idx, new_shape)] = min(
+				stored_value, current_value
+			)
+
+			multi_idx = self._circular_increment_multi_idx(multi_idx, self.shape)
+
+		return new_array
+
+	def argmax(self, axis: int) -> Array:
+		"""Comput the argmax along given axis"""
+		# TODO: further sanity checking is necessary.
+		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
+		new_array = self.array_from_shape(new_shape)
+
+		# create starting multi-idx, to iterate over all its possible values
+		multi_idx = tuple([0 for _ in self.shape])
+		for _ in range(self.size):
+			current_value = self.data[self._flatten_multi_idx(multi_idx, self.shape)]
+			adapted_multi_idx = [elem for idx, elem in enumerate(multi_idx) if idx not in axis]
+			stored_value = new_array.data[self._flatten_multi_idx(adapted_multi_idx, new_shape)]
+
+			new_array.data[self._flatten_multi_idx(adapted_multi_idx, new_shape)] = max(
+				stored_value, current_value
+			)
+
+			multi_idx = self._circular_increment_multi_idx(multi_idx, self.shape)
+
+		return new_array

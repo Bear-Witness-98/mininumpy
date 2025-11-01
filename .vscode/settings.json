@@ -1,0 +1,35 @@
+{
+	//
+	// Linting and formatting
+	//
+	// Configured following https://github.com/astral-sh/ruff-vscode?tab=readme-ov-file#configuring-vs-code
+	// guidelines.
+	"[python]": {
+		"editor.formatOnSave": true,
+		"editor.codeActionsOnSave": {
+			"source.organizeImports.ruff": "explicit"
+		},
+		"editor.defaultFormatter": "charliermarsh.ruff"
+	},
+	"editor.rulers": [
+		100 // if changing line length, also do it in pyproject.toml's [tool.ruff] section
+	],
+	"editor.wordWrapColumn": 100,
+	"files.trimFinalNewlines": true,
+	"files.trimTrailingWhitespace": true,
+	//
+	// Jupyter
+	//
+	"notebook.formatOnSave.enabled": true,
+
+	// I added the following 3 for windows issues
+	"editor.insertSpaces": false,
+	"editor.useTabStops": false,
+	"editor.detectIndentation": false,
+	"editor.tabSize": 4
+
+	// These below don't work plug-n-play in Windows
+	// "jupyter.notebookFileRoot": "${workspaceFolder}",
+	// "jupyter.interactiveWindow.textEditor.executeSelection": true,
+
+}
