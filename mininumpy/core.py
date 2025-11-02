@@ -1,8 +1,7 @@
 from math import prod
 
-from utils import assert_int_tuple, assert_list_int_float
-
 from .array import Array
+from .utils import assert_list_int_float, assert_tuple_of_int
 
 """
 Main methods for creating MiniNumPy arrays.
@@ -86,13 +85,13 @@ def _singular_value_array(shape: tuple[int], value: int | float) -> Array:
 
 def zeros(shape: tuple[int]) -> Array:
 	"""Returns an array of zeros of the specified shape."""
-	assert_int_tuple(shape)
+	assert_tuple_of_int(shape)
 	return _singular_value_array(shape, 0)
 
 
 def ones(shape: tuple[int]) -> Array:
 	"""Returns an array of ones of the specified shape."""
-	assert_int_tuple(shape)
+	assert_tuple_of_int(shape)
 	return _singular_value_array(shape, 1)
 
 

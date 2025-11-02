@@ -3,6 +3,8 @@ from __future__ import annotations  # for typehinting the Array class within its
 
 from math import exp, log, prod, sqrt
 
+from .utils import assert_list_of_float_int, assert_tuple_of_int, assert_type_is_int_float
+
 
 class Array:
 	"""Array to implement lite version of NumPy."""
@@ -14,7 +16,10 @@ class Array:
 	size: int
 
 	def __init__(
-		self, shape: tuple[int], dtype: type[int | float], data: None | list[int | float] = None
+		self,
+		shape: tuple[int],
+		dtype: None | type[int | float],
+		data: None | list[int | float] = None,
 	):
 		"""
 		Creates Array object from given list,
@@ -23,6 +28,13 @@ class Array:
 		dimension. If the input list does not match these conditions, a ValueError will be raised
 		at runtime.
 		"""
+		# check inputs
+		assert_tuple_of_int(shape)
+		if dtype is not None:
+			assert_type_is_int_float(dtype)
+		if data is not None:
+			assert_list_of_float_int(data)
+
 		# compute shape and related quantities
 		self.shape = shape
 		self.ndim = len(self.shape)
@@ -41,13 +53,14 @@ class Array:
 		"""
 		return Array(self.shape, self.dtype, self.data)
 
-	# TODO: sanitise the input for it to be a tuple of ints
 	def reshape(self, new_shape: tuple[int]) -> Array:
 		"""
 		Reshapes array to given new_shape.
 
 		If the size of new_shape does not match self.size, a RuntimeError will be rised.
 		"""
+		assert_tuple_of_int(new_shape)
+
 		if prod(new_shape) != self.size:
 			raise RuntimeError("Size of input shape does not correspond to size of current array")
 		new_array = self.copy()
@@ -101,8 +114,8 @@ class Array:
 		# sanity check the input
 		if permutation is None:
 			permutation = tuple(reversed(range(self.ndim)))
-		if not isinstance(permutation, tuple):
-			raise ValueError("Non tuple, non-None value given as permutation")
+
+		assert_tuple_of_int(permutation)
 		if set(permutation) != set(range(len(permutation))):
 			raise RuntimeError("Invalid permutation for transposition.")
 
@@ -317,13 +330,12 @@ class Array:
 		return new_array
 
 	@staticmethod
-	def _sanitize_operand(operand: any) -> None:
+	def _assert_operand(operand: any) -> None:
 		if not isinstance(operand, (int, float, Array)):
 			raise ValueError(f"Unsopported operation for types {Array} and {type(operand)}")
-		pass
 
 	def __add__(self, right_operand: Array | int | float) -> Array:
-		self._sanitize_operand(right_operand)
+		self._assert_operand(right_operand)
 		right_operand = (
 			Array((1,), type(right_operand), data=[right_operand])
 			if isinstance(right_operand, (int, float))
@@ -335,7 +347,7 @@ class Array:
 	__radd__ = __add__
 
 	def __sub__(self, right_operand: Array | int | float) -> Array:
-		self._sanitize_operand(right_operand)
+		self._assert_operand(right_operand)
 		right_operand = (
 			Array((1,), type(right_operand), data=[right_operand])
 			if isinstance(right_operand, (int, float))
@@ -345,7 +357,7 @@ class Array:
 		return self._operation_with_broadcasting(self, right_operand, "sub", new_type)
 
 	def __rsub__(self, left_operand: Array | int | float) -> Array:
-		self._sanitize_operand(left_operand)
+		self._assert_operand(left_operand)
 		left_operand = (
 			Array((1,), type(left_operand), data=[left_operand])
 			if isinstance(left_operand, (int, float))
@@ -355,7 +367,7 @@ class Array:
 		return self._operation_with_broadcasting(left_operand, self, "sub", new_type)
 
 	def __mul__(self, right_operand: Array | int | float) -> Array:
-		self._sanitize_operand(right_operand)
+		self._assert_operand(right_operand)
 		right_operand = (
 			Array((1,), type(right_operand), data=[right_operand])
 			if isinstance(right_operand, (int, float))
@@ -367,7 +379,7 @@ class Array:
 	__rmul__ = __mul__
 
 	def __truediv__(self, right_operand: Array | int | float) -> Array:
-		self._sanitize_operand(right_operand)
+		self._assert_operand(right_operand)
 		right_operand = (
 			Array((1,), type(right_operand), data=[right_operand])
 			if isinstance(right_operand, (int, float))
@@ -376,7 +388,7 @@ class Array:
 		return self._operation_with_broadcasting(self, right_operand, "truediv", float)
 
 	def __rtruediv__(self, left_operand: Array | int | float) -> Array:
-		self._sanitize_operand(left_operand)
+		self._assert_operand(left_operand)
 		left_operand = (
 			Array((1,), type(left_operand), data=[left_operand])
 			if isinstance(left_operand, (int, float))
@@ -385,7 +397,7 @@ class Array:
 		return self._operation_with_broadcasting(left_operand, self, "truediv", float)
 
 	def __pow__(self, right_operand: Array | int | float) -> Array:
-		self._sanitize_operand(right_operand)
+		self._assert_operand(right_operand)
 		right_operand = (
 			Array((1,), type(right_operand), data=[right_operand])
 			if isinstance(right_operand, (int, float))
@@ -395,7 +407,7 @@ class Array:
 		return self._operation_with_broadcasting(self, right_operand, "pow", new_type)
 
 	def __rpow__(self, left_operand: Array | int | float) -> Array:
-		self._sanitize_operand(left_operand)
+		self._assert_operand(left_operand)
 		left_operand = (
 			Array((1,), type(left_operand), data=[left_operand])
 			if isinstance(left_operand, (int, float))
@@ -408,8 +420,7 @@ class Array:
 	def _general_aggregate(self, axis: tuple[int] | None = None) -> Array:
 		if axis is None:
 			axis = (-1,)
-		if not isinstance(axis, tuple):
-			raise ValueError("Axis given is not a tuple of int or None.")
+		assert_tuple_of_int(axis)
 
 		# TODO: further sanity checking is necessary.
 		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
@@ -433,8 +444,7 @@ class Array:
 	def sum(self, axis: tuple[int] | None = None) -> Array:
 		if axis is None:
 			axis = (-1,)
-		if not isinstance(axis, tuple):
-			raise ValueError("Axis given is not a tuple of int or None.")
+		assert_tuple_of_int(axis)
 
 		# TODO: further sanity checking is necessary.
 		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
@@ -458,8 +468,7 @@ class Array:
 	def mean(self, axis: tuple[int] | None = None) -> Array:
 		if axis is None:
 			axis = (-1,)
-		if not isinstance(axis, tuple):
-			raise ValueError("Axis given is not a tuple of int or None.")
+		assert_tuple_of_int(axis)
 
 		# TODO: further sanity checking is necessary.
 		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
@@ -487,8 +496,7 @@ class Array:
 	def max(self, axis: tuple[int] | None = None) -> Array:
 		if axis is None:
 			axis = (-1,)
-		if not isinstance(axis, tuple):
-			raise ValueError("Axis given is not a tuple of int or None.")
+		assert_tuple_of_int(axis)
 
 		# TODO: further sanity checking is necessary.
 		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
@@ -512,8 +520,7 @@ class Array:
 	def min(self, axis: tuple[int] | None = None) -> Array:
 		if axis is None:
 			axis = (-1,)
-		if not isinstance(axis, tuple):
-			raise ValueError("Axis given is not a tuple of int or None.")
+		assert_tuple_of_int(axis)
 
 		# TODO: further sanity checking is necessary.
 		new_shape = [elem for idx, elem in enumerate(self.shape) if idx not in axis]
